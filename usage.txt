@@ -1,0 +1,288 @@
+Git 基礎操作（Git Basic Usage）
+
+一、基本工作流程
+
+寫程式 → 加入暫存區 → 建立版本 → 上傳到 GitHub
+
+常用流程：
+
+    git status
+    git add .
+    git commit -m "message"
+    git push
+
+建議日常工作流程：
+
+    git pull
+    git add .
+    git commit -m "feature: describe your change"
+    git push
+
+
+二、常用 Git 指令
+
+查看目前修改狀態：
+
+    git status
+
+加入所有修改檔案到暫存區：
+
+    git add .
+
+只加入單一檔案：
+
+    git add filename
+
+建立一個新的版本（commit）：
+
+    git commit -m "commit message"
+
+推送到 GitHub：
+
+    git push
+
+從 GitHub 下載最新版本：
+
+    git pull
+
+查看 commit 歷史：
+
+    git log
+
+
+三、查看更清楚的版本歷史
+
+    git log --oneline --graph
+
+可以看到簡化的 commit 歷史與分支結構。
+
+
+四、查看某個檔案的修改歷史
+
+    git log filename
+
+例如：
+
+    git log src/name_normalizer.c
+
+
+五、查看某個 commit 改了哪些內容
+
+    git show commitID
+
+例如：
+
+    git show f4a7ad6
+
+
+六、查看目前修改的差異
+
+    git diff
+
+可以看到哪些程式碼被修改。
+
+
+七、常見 Git 工作習慣
+
+1. 每完成一個功能就 commit
+2. commit message 要清楚描述修改內容
+3. commit 不要太大
+
+建議 commit message 格式：
+
+    feature: add rank parser
+    fix: correct score normalization
+    docs: update README
+    refactor: reorganize normalization modules
+
+
+八、推薦 Git alias（方便查看 commit 樹）
+
+設定：
+
+    git config --global alias.tree "log --oneline --graph --decorate --all"
+
+之後使用：
+
+    git tree
+
+即可看到完整 commit 樹狀結構。
+
+
+九、專案建議 Git workflow
+
+對於 clawer-normalizer-c 專案：
+
+    git pull
+    git add src/changed_file.c
+    git commit -m "feature: implement normalization logic"
+    git push
+
+這樣可以保持版本歷史清楚並避免衝突。
+
+
+十、Git 分支（Branch）操作
+
+建立新的 branch：
+
+    git branch feature-name
+
+切換到某個 branch：
+
+    git switch feature-name
+
+或舊寫法：
+
+    git checkout feature-name
+
+查看目前有哪些 branch：
+
+    git branch
+
+合併 branch 到 main：
+
+    git switch main
+    git merge feature-name
+
+
+十一、暫存未完成修改（git stash）
+
+如果正在修改程式但暫時不想 commit，可以使用 stash：
+
+    git stash
+
+這會把目前修改暫存起來並恢復乾淨的工作目錄。
+
+查看 stash 列表：
+
+    git stash list
+
+取回最近一次 stash：
+
+    git stash pop
+
+
+十二、回復版本
+
+回復某個檔案到最後一次 commit：
+
+    git restore filename
+
+回到某個 commit（查看舊版本）：
+
+    git checkout commitID
+
+如果想撤銷某次 commit（安全做法）：
+
+    git revert commitID
+
+
+十三、多人合作基本流程（GitHub Collaboration）
+
+多人協作時建議流程：
+
+    git pull
+    git switch -c feature-new-function
+
+完成修改後：
+
+    git add .
+    git commit -m "feature: implement new function"
+    git push origin feature-new-function
+
+之後在 GitHub 建立 Pull Request (PR)，
+由專案維護者審查後合併到 main。
+
+這是大部分開源專案與公司團隊常見的開發流程。
+
+十四、進階 Git 指令（常見工程實務）
+
+1. git reset（回退 commit）
+
+如果想回到前一個 commit：
+
+    git reset --soft HEAD~1
+
+只會回退 commit，但保留修改內容。
+
+如果想完全回到某個版本：
+
+    git reset --hard commitID
+
+注意：這會刪除之後所有修改。
+
+
+2. git rebase（整理 commit 歷史）
+
+重新整理 commit 歷史，使版本歷史更乾淨：
+
+    git rebase main
+
+互動式整理 commit：
+
+    git rebase -i HEAD~3
+
+可以合併或修改最近幾個 commit。
+
+
+3. git tag（版本標記 / release）
+
+建立版本標籤：
+
+    git tag v1.0
+
+推送 tag 到 GitHub：
+
+    git push origin v1.0
+
+查看所有 tag：
+
+    git tag
+
+這通常用於 release 版本。
+
+
+4. GitHub Release Workflow
+
+常見開源專案 release 流程：
+
+    git add .
+    git commit -m "release: version 1.0"
+    git tag v1.0
+    git push
+    git push origin v1.0
+
+之後在 GitHub 建立 Release 說明。
+
+
+十五、常見 Git 問題與解法
+
+1. push 被拒絕（remote 有更新）：
+
+    git pull
+    git push
+
+2. commit 後想修改 message：
+
+    git commit --amend
+
+3. 想取消某個檔案的修改：
+
+    git restore filename
+
+4. 想重新下載遠端版本：
+
+    git fetch
+    git reset --hard origin/main
+
+
+十六、Git 使用心法
+
+1. commit 小而清楚
+2. commit message 要有意義
+3. 每天 push 到遠端 repo
+4. 重要版本用 tag
+5. pull request 前先 pull 最新版本
+
+Git 本質是「專案歷史管理工具」，
+良好的 commit 歷史會讓專案維護與除錯更容易。
