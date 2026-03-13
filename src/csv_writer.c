@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "record.h"
+#include "csv_writer.h"
 
 /*
  * csv_writer.c
@@ -19,7 +19,7 @@
  * Writes normalized university records to a CSV file.
  *
  * Output format:
- * name,country,rank_min,rank_max,score
+ * University,Country,Rank Min,Rank Max,Overall Score
  *
  * Returns:
  * - 1 on success
@@ -40,15 +40,23 @@ int write_normalized_csv(const char *filename, const UniversityRecord records[],
         return 0;
     }
 
-    fprintf(fp, "name,country,rank_min,rank_max,score\n");
+    fprintf(fp, "University,Country,Rank Min,Rank Max,Overall Score\n");
 
     for (i = 0; i < count; i++) {
-        fprintf(fp, "%s,%s,%d,%d,%.2f\n",
-                records[i].normalized_name,
-                records[i].normalized_country,
-                records[i].rank_min,
-                records[i].rank_max,
-                records[i].score);
+        if (records[i].score < 0) {
+            fprintf(fp, "%s,%s,%d,%d,\n",
+                    records[i].normalized_name,
+                    records[i].normalized_country,
+                    records[i].rank_min,
+                    records[i].rank_max);
+        } else {
+            fprintf(fp, "%s,%s,%d,%d,%.2f\n",
+                    records[i].normalized_name,
+                    records[i].normalized_country,
+                    records[i].rank_min,
+                    records[i].rank_max,
+                    records[i].score);
+        }
     }
 
     fclose(fp);

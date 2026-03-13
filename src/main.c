@@ -1,21 +1,15 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "record.h"
 #include "normalizer.h"
 #include "csv_reader.h"
+#include "csv_writer.h"
 
 #define MAX_RECORDS 100
 #define SAMPLE_CSV_PATH "data/samples/raw_universities.csv"
+#define OUTPUT_CSV_PATH "data/samples/normalized_universities.csv"
 
-
-/*
- * print_raw_records
- *
- * Displays raw input data loaded from the CSV file.
- */
 static void print_raw_records(const UniversityRecord records[], int count) {
     int i;
 
@@ -30,11 +24,6 @@ static void print_raw_records(const UniversityRecord records[], int count) {
     }
 }
 
-/*
- * print_normalized_records
- *
- * Displays normalized output data after processing.
- */
 static void print_normalized_records(const UniversityRecord records[], int count) {
     int i;
 
@@ -50,17 +39,13 @@ static void print_normalized_records(const UniversityRecord records[], int count
     }
 }
 
-/*
- * show_menu
- *
- * Prints the CLI menu.
- */
 static void show_menu(void) {
     printf("\n==== Clawer C Data Normalization Engine ====\n");
     printf("1. 載入 CSV 資料\n");
     printf("2. 顯示原始資料\n");
     printf("3. 執行完整正規化流程\n");
     printf("4. 顯示正規化後資料\n");
+    printf("5. 匯出正規化結果到 CSV\n");
     printf("0. 離開程式\n");
     printf("請輸入選項: ");
 }
@@ -119,6 +104,20 @@ int main(void) {
                     printf("\n資料尚未正規化，請先執行選項 3。\n");
                 } else {
                     print_normalized_records(records, record_count);
+                }
+                break;
+
+            case 5:
+                if (!is_loaded) {
+                    printf("\n尚未載入資料，請先執行選項 1。\n");
+                } else if (!is_normalized) {
+                    printf("\n資料尚未正規化，請先執行選項 3。\n");
+                } else {
+                    if (write_normalized_csv(OUTPUT_CSV_PATH, records, record_count)) {
+                        printf("\n已成功輸出到：%s\n", OUTPUT_CSV_PATH);
+                    } else {
+                        printf("\n輸出 CSV 失敗。\n");
+                    }
                 }
                 break;
 

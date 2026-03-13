@@ -5,7 +5,7 @@
 #include "csv_reader.h"
 
 #define CSV_LINE_LEN 512
-#define MAX_FIELDS 4
+#define MAX_FIELDS 11
 
 /*
  * split_csv_line
@@ -73,7 +73,7 @@ static void initialize_record(UniversityRecord *record) {
  *
  * Reads university data from a CSV file.
  * Expected format per line:
- * name,country,rank,score
+ * QS Rank,University,Country,GMAT,GRE,GPA,IELTS,TOEFL,Duolingo,Overall Score,URL
  *
  * The first row is treated as a header row and skipped.
  *
@@ -128,16 +128,23 @@ int load_csv_data(const char *filename, UniversityRecord records[], int max_reco
 
         initialize_record(&records[record_count]);
 
-        strncpy(records[record_count].raw_name, fields[0], NAME_LEN - 1);
-        records[record_count].raw_name[NAME_LEN - 1] = '\0';
-
-        strncpy(records[record_count].raw_country, fields[1], COUNTRY_LEN - 1);
-        records[record_count].raw_country[COUNTRY_LEN - 1] = '\0';
-
-        strncpy(records[record_count].raw_rank, fields[2], RANK_STR_LEN - 1);
+        /*
+         * CSV column mapping:
+         * 0  -> QS Rank
+         * 1  -> University
+         * 2  -> Country
+         * 9  -> Overall Score
+         */
+        strncpy(records[record_count].raw_rank, fields[0], RANK_STR_LEN - 1);
         records[record_count].raw_rank[RANK_STR_LEN - 1] = '\0';
 
-        strncpy(records[record_count].raw_score, fields[3], SCORE_STR_LEN - 1);
+        strncpy(records[record_count].raw_name, fields[1], NAME_LEN - 1);
+        records[record_count].raw_name[NAME_LEN - 1] = '\0';
+
+        strncpy(records[record_count].raw_country, fields[2], COUNTRY_LEN - 1);
+        records[record_count].raw_country[COUNTRY_LEN - 1] = '\0';
+
+        strncpy(records[record_count].raw_score, fields[9], SCORE_STR_LEN - 1);
         records[record_count].raw_score[SCORE_STR_LEN - 1] = '\0';
 
         record_count++;
