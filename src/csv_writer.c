@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 
 #include "csv_writer.h"
@@ -7,10 +5,7 @@
 /*
  * csv_writer.c
  *
- * First-version CSV export helper for normalized university data.
- *
- * This module writes normalized records to a CSV file so the pipeline becomes:
- * Raw CSV -> Load -> Normalize -> Export Clean CSV
+ * CSV export helper for normalized university data.
  */
 
 /*
