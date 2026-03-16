@@ -1,154 +1,45 @@
-# Clawer C Data Normalization Engine
+# crawlernest-normalization
 
-高效能 C 語言資料正規化引擎，用於清洗與標準化大學資料集。
-
-## 專案定位
-
-此專案負責將來源不一致的學校資料轉換為可分析、可儲存的統一格式，典型流程如下：
-
-`Raw CSV -> CSV Reader -> Normalization Pipeline -> CSV Writer`
-
-可作為爬蟲或 ETL 流程中的 Data Quality Layer，先清洗再入庫。
-
-## 目前已實作能力
-
-- University 名稱正規化
-  - 去除標點、轉小寫、去頭尾空白、壓縮連續空白
-- Country 正規化
-  - 支援常見別名映射（如 `U.S.A.` -> `United States`、`ROC` -> `Taiwan`）
-- Rank 解析
-  - 支援 `53`、`Rank 53`、`101-150`、`Top 100`、含 en/em dash 格式
-- Score 解析
-  - 可從字串中抽取第一個數值（如 `Score: 91.25`）
-- Dataset Pipeline
-  - 一次對整批 `UniversityRecord[]` 套用完整正規化
-- CLI Demo
-  - 載入資料、檢視 raw/normalized、輸出正規化 CSV
-- Unit Tests
-  - 針對核心 normalization/parsing 功能提供測試
-
-## 專案結構
-
-```text
-.
-├── include/
-│   ├── record.h
-│   ├── normalizer.h
-│   ├── csv_reader.h
-│   ├── csv_writer.h
-│   └── utils.h
-├── src/
-│   ├── main.c
-│   ├── normalizer.c
-│   ├── name_normalizer.c
-│   ├── country_normalizer.c
-│   ├── rank_parser.c
-│   ├── score_parser.c
-│   ├── requirement_parser.c
-│   ├── csv_reader.c
-│   ├── csv_writer.c
-│   ├── utils.c
-│   └── tests/test_normalizer.c
-├── data/samples/
-│   ├── raw_universities.csv
-│   └── normalized_universities.csv
-├── docs/architecture.md
-├── Makefile
-└── readme.md
-```
-
-## 資料模型
-
-核心資料結構為 `UniversityRecord`（`include/record.h`），同時保留 raw 與 normalized 欄位：
-
-- Raw: `raw_name`, `raw_country`, `raw_rank`, `raw_score`
-- Normalized: `normalized_name`, `normalized_country`, `rank_min`, `rank_max`, `score`
-
-## CSV I/O 格式
-
-目前 `csv_reader.c` 預期輸入為 5 欄：
-
-`University,Country,Rank Min,Rank Max,Overall Score`
-
-Reader 會把 `Rank Min` 與 `Rank Max` 合併成 `raw_rank`（例如 `101-150`）再交給 parser。
-
-Writer 輸出格式同為：
-
-`University,Country,Rank Min,Rank Max,Overall Score`
-
-若分數無法解析（< 0），輸出時會留空。
-
-## Build 與執行
-
-需求：
-
-- GCC（支援 C11）
-- `make`
-
-常用指令：
-
-```bash
-make          # 編譯主程式 -> build/clawer_normalizer
-make run      # 執行 CLI
-make test     # 執行單元測試
-make clean    # 清除編譯產物
-make rebuild  # clean + make
-```
-
-## CLI 使用流程
-
-執行 `make run` 後，選單流程如下：
-
-1. 載入 CSV（預設讀取 `data/samples/raw_universities.csv`）
-2. 顯示原始資料
-3. 執行完整正規化
-4. 顯示正規化結果
-5. 匯出 CSV（預設輸出 `data/samples/normalized_universities.csv`）
-
-## 測試
-
-`make test` 會建立並執行 `build/test_normalizer`，覆蓋：
-
-- `normalize_name`
-- `normalize_country`
-- `parse_rank`
-- `parse_score`
-- `normalize_record` pipeline
+數據規規化引擎，用於標準化大學名稱、國家及成績分數。
 
 ## 模組說明
+- **c_engine**: 使用 C 語言編寫的高效能規規化引擎。
+  - `src/`: 核心實作代碼。
+  - `include/`: 標頭檔。
+  - `Makefile`: 編譯腳本。
+  - `data/samples/`: 存放原始與規規化後的 CSV 檔案。
 
-- `src/normalizer.c`
-  - Pipeline orchestration，依序呼叫 name/country/rank/score 模組
-- `src/name_normalizer.c`
-  - 名稱清洗與格式標準化
-- `src/country_normalizer.c`
-  - 國家別名對照與標準化
-- `src/rank_parser.c`
-  - 排名字串解析為 `rank_min/rank_max`
-- `src/score_parser.c`
-  - 分數字串抽值為 `double`
-- `src/utils.c`
-  - 共用字串工具（trim/lowercase/remove punctuation/collapse spaces）
-- `src/csv_reader.c`
-  - 載入 CSV 並映射到 `UniversityRecord`
-- `src/csv_writer.c`
-  - 匯出 normalized CSV
+## 使用說明 (C 引擎)
 
-## 已知限制
+此模組提供高效能的 CLI 工具，用於批次處理爬蟲產出的 CSV 數據。
 
-- CSV parser 目前為簡化版，使用逗號切分，不支援引號包覆的複雜欄位
-- `MAX_RECORDS` 目前在 `src/main.c` 固定為 `100`
-- `requirement_parser.c` 已納入編譯，但尚未實作功能
-- Country alias map 仍屬基礎版本，可持續擴充
+### 1. 編譯引擎
+在 `c_engine` 目錄下執行以下指令：
+```bash
+cd c_engine
+make
+```
 
-## Roadmap 建議
+### 2. 準備數據
+將爬蟲產出的 CSV 檔案（例如 `universities_world.csv`）複製到範例數據目錄：
+```bash
+cp ../../universities_world.csv data/samples/raw_universities.csv
+```
 
-- 改成 robust CSV parser（支援 quoted fields）
-- 增加欄位驗證與錯誤報告機制
-- 擴充 country/name alias dictionary
-- 新增 benchmark 與壓力測試
-- 補齊 `requirement_parser` 與更多業務規則
+### 3. 執行規規化
+執行編譯好的程式並按照選單操作：
+```bash
+make run
+```
+**選單操作步驟：**
+1.  輸入 `1`：載入 CSV 資料。
+2.  輸入 `3`：執行完整正規化流程（清洗名稱、解析排名區間、提取分數）。
+3.  輸入 `4`：預覽規規化後的結果。
+4.  輸入 `5`：將結果匯出成新的 `.csv` 檔。
 
-## License
+### 4. 查看結果
+規規化後的檔案預設儲存在：
+`data/samples/normalized_universities.csv`
 
-本專案採用 `LICENSE` 中所定義的授權條款。
+---
+*註：規規化流程會移除多餘標點符號、統一轉換小寫，並將排名區間（如 101-150）解析為數值格式。*
