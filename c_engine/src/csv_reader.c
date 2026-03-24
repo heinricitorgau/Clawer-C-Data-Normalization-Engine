@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,26 +6,126 @@
 #include "csv_reader.h"
 #include "utils.h"
 
-#define CSV_LINE_LEN 512
-#define MAX_FIELDS 11
+#define CSV_LINE_LEN 1024
+#define CSV_EXPECTED_COLUMNS 5
+#define CSV_FIELD_LEN 256
+
+typedef enum {
+    CSV_PARSE_OK = 0,
+    CSV_PARSE_TOO_MANY_FIELDS,
+    CSV_PARSE_UNTERMINATED_QUOTE,
+    CSV_PARSE_INVALID_QUOTE,
+    CSV_PARSE_FIELD_TOO_LONG
+} CsvParseStatus;
+
+typedef struct {
+    int idx_name;
+    int idx_country;
+    int idx_rank_min;
+    int idx_rank_max;
+    int idx_score;
+} CsvHeaderMap;
 
 /*
- * split_csv_line
+ * parse_csv_row
  *
- * Splits a simple comma-separated line into fields.
- * This implementation is intended for controlled sample data and does not
- * fully support quoted commas.
+ * Parses one CSV row into fixed-size field buffers.
+ *
+ * Supported:
+ * - quoted fields
+ * - commas inside quoted fields
+ * - escaped quotes using ""
+ *
+ * This parser treats one input line as one CSV row.
  */
-static int split_csv_line(char *line, char *fields[], int max_fields) {
-    int count = 0;
-    char *token = strtok(line, ",");
+static CsvParseStatus parse_csv_row(
+    const char *line,
+    char fields[][CSV_FIELD_LEN],
+    int max_fields,
+    int *out_field_count
+) {
+    int field_index = 0;
+    int char_index = 0;
+    int in_quotes = 0;
+    int after_closing_quote = 0;
+    int i;
 
-    while (token != NULL && count < max_fields) {
-        fields[count++] = token;
-        token = strtok(NULL, ",");
+    if (line == NULL || fields == NULL || out_field_count == NULL || max_fields <= 0) {
+        return CSV_PARSE_INVALID_QUOTE;
     }
 
-    return count;
+    for (i = 0; i < max_fields; i++) {
+        fields[i][0] = '\0';
+    }
+
+    for (i = 0; line[i] != '\0'; i++) {
+        char ch = line[i];
+
+        if (in_quotes) {
+            if (ch == '"') {
+                if (line[i + 1] == '"') {
+                    if (char_index >= CSV_FIELD_LEN - 1) {
+                        return CSV_PARSE_FIELD_TOO_LONG;
+                    }
+                    fields[field_index][char_index++] = '"';
+                    i++;
+                } else {
+                    in_quotes = 0;
+                    after_closing_quote = 1;
+                }
+            } else {
+                if (char_index >= CSV_FIELD_LEN - 1) {
+                    return CSV_PARSE_FIELD_TOO_LONG;
+                }
+                fields[field_index][char_index++] = ch;
+            }
+            continue;
+        }
+
+        if (after_closing_quote) {
+            if (ch == ',') {
+                fields[field_index][char_index] = '\0';
+                field_index++;
+                if (field_index >= max_fields) {
+                    return CSV_PARSE_TOO_MANY_FIELDS;
+                }
+                char_index = 0;
+                after_closing_quote = 0;
+            } else if (isspace((unsigned char)ch)) {
+                continue;
+            } else {
+                return CSV_PARSE_INVALID_QUOTE;
+            }
+            continue;
+        }
+
+        if (ch == ',') {
+            fields[field_index][char_index] = '\0';
+            field_index++;
+            if (field_index >= max_fields) {
+                return CSV_PARSE_TOO_MANY_FIELDS;
+            }
+            char_index = 0;
+        } else if (ch == '"') {
+            if (char_index != 0) {
+                return CSV_PARSE_INVALID_QUOTE;
+            }
+            in_quotes = 1;
+        } else {
+            if (char_index >= CSV_FIELD_LEN - 1) {
+                return CSV_PARSE_FIELD_TOO_LONG;
+            }
+            fields[field_index][char_index++] = ch;
+        }
+    }
+
+    if (in_quotes) {
+        return CSV_PARSE_UNTERMINATED_QUOTE;
+    }
+
+    fields[field_index][char_index] = '\0';
+    *out_field_count = field_index + 1;
+    return CSV_PARSE_OK;
 }
 
 /*
@@ -44,6 +145,38 @@ static void trim_newline(char *str) {
         str[len - 1] = '\0';
         len--;
     }
+}
+
+/*
+ * strip_utf8_bom
+ *
+ * Removes a UTF-8 BOM from the beginning of a line when present.
+ */
+static void strip_utf8_bom(char *str) {
+    if (str == NULL) {
+        return;
+    }
+
+    if ((unsigned char)str[0] == 0xEF &&
+        (unsigned char)str[1] == 0xBB &&
+        (unsigned char)str[2] == 0xBF) {
+        memmove(str, str + 3, strlen(str + 3) + 1);
+    }
+}
+
+/*
+ * normalize_header_name
+ *
+ * Simplifies a header string for exact schema comparison.
+ */
+static void normalize_header_name(char *header) {
+    if (header == NULL) {
+        return;
+    }
+
+    trim_whitespace(header);
+    collapse_spaces(header);
+    to_lowercase(header);
 }
 
 /*
@@ -70,6 +203,146 @@ static void initialize_record(UniversityRecord *record) {
 }
 
 /*
+ * report_csv_error
+ *
+ * Prints a line-numbered CSV parsing error.
+ */
+static void report_csv_error(int line_number, CsvParseStatus status) {
+    const char *message = "unknown CSV parsing error";
+
+    switch (status) {
+        case CSV_PARSE_TOO_MANY_FIELDS:
+            message = "too many columns in row";
+            break;
+        case CSV_PARSE_UNTERMINATED_QUOTE:
+            message = "unterminated quoted field";
+            break;
+        case CSV_PARSE_INVALID_QUOTE:
+            message = "invalid quote placement in row";
+            break;
+        case CSV_PARSE_FIELD_TOO_LONG:
+            message = "field exceeds maximum supported length";
+            break;
+        case CSV_PARSE_OK:
+        default:
+            break;
+    }
+
+    fprintf(stderr, "CSV warning at line %d: %s.\n", line_number, message);
+}
+
+/*
+ * validate_and_map_header
+ *
+ * Validates the expected schema and stores column indices.
+ *
+ * Expected header:
+ * University,Country,Rank Min,Rank Max,Overall Score
+ */
+static int validate_and_map_header(
+    char fields[][CSV_FIELD_LEN],
+    int field_count,
+    CsvHeaderMap *header_map
+) {
+    char normalized[CSV_FIELD_LEN];
+
+    if (fields == NULL || header_map == NULL) {
+        return 0;
+    }
+
+    if (field_count != CSV_EXPECTED_COLUMNS) {
+        fprintf(stderr,
+                "Error: invalid CSV header column count. Expected %d columns, got %d.\n",
+                CSV_EXPECTED_COLUMNS,
+                field_count);
+        return 0;
+    }
+
+    header_map->idx_name = -1;
+    header_map->idx_country = -1;
+    header_map->idx_rank_min = -1;
+    header_map->idx_rank_max = -1;
+    header_map->idx_score = -1;
+
+    safe_copy_string(normalized, sizeof(normalized), fields[0]);
+    normalize_header_name(normalized);
+    if (strcmp(normalized, "university") != 0) {
+        fprintf(stderr, "Error: expected header column 1 to be 'University'.\n");
+        return 0;
+    }
+    header_map->idx_name = 0;
+
+    safe_copy_string(normalized, sizeof(normalized), fields[1]);
+    normalize_header_name(normalized);
+    if (strcmp(normalized, "country") != 0) {
+        fprintf(stderr, "Error: expected header column 2 to be 'Country'.\n");
+        return 0;
+    }
+    header_map->idx_country = 1;
+
+    safe_copy_string(normalized, sizeof(normalized), fields[2]);
+    normalize_header_name(normalized);
+    if (strcmp(normalized, "rank min") != 0) {
+        fprintf(stderr, "Error: expected header column 3 to be 'Rank Min'.\n");
+        return 0;
+    }
+    header_map->idx_rank_min = 2;
+
+    safe_copy_string(normalized, sizeof(normalized), fields[3]);
+    normalize_header_name(normalized);
+    if (strcmp(normalized, "rank max") != 0) {
+        fprintf(stderr, "Error: expected header column 4 to be 'Rank Max'.\n");
+        return 0;
+    }
+    header_map->idx_rank_max = 3;
+
+    safe_copy_string(normalized, sizeof(normalized), fields[4]);
+    normalize_header_name(normalized);
+    if (strcmp(normalized, "overall score") != 0) {
+        fprintf(stderr, "Error: expected header column 5 to be 'Overall Score'.\n");
+        return 0;
+    }
+    header_map->idx_score = 4;
+
+    return 1;
+}
+
+/*
+ * map_row_to_record
+ *
+ * Copies parsed CSV fields into a UniversityRecord.
+ */
+static int map_row_to_record(
+    char fields[][CSV_FIELD_LEN],
+    int field_count,
+    const CsvHeaderMap *header_map,
+    UniversityRecord *record
+) {
+    if (fields == NULL || header_map == NULL || record == NULL) {
+        return 0;
+    }
+
+    if (field_count != CSV_EXPECTED_COLUMNS) {
+        return 0;
+    }
+
+    initialize_record(record);
+
+    safe_copy_string(record->raw_name, NAME_LEN, fields[header_map->idx_name]);
+    safe_copy_string(record->raw_country, COUNTRY_LEN, fields[header_map->idx_country]);
+
+    snprintf(record->raw_rank,
+             RANK_STR_LEN,
+             "%s-%s",
+             fields[header_map->idx_rank_min],
+             fields[header_map->idx_rank_max]);
+
+    safe_copy_string(record->raw_score, SCORE_STR_LEN, fields[header_map->idx_score]);
+
+    return 1;
+}
+
+/*
  * load_csv_data
  *
  * Reads university data from a CSV file.
@@ -80,15 +353,12 @@ static void initialize_record(UniversityRecord *record) {
 int load_csv_data(const char *filename, UniversityRecord records[], int max_records) {
     FILE *fp;
     char line[CSV_LINE_LEN];
+    char fields[CSV_EXPECTED_COLUMNS][CSV_FIELD_LEN];
     int record_count = 0;
-    int is_header = 1;
-
-    int idx_name = -1;
-    int idx_country = -1;
-    int idx_rank_min = -1;
-    int idx_rank_max = -1;
-    int idx_score = -1;
-    int idx_rank_legacy = -1;
+    int line_number = 0;
+    int field_count;
+    CsvParseStatus parse_status;
+    CsvHeaderMap header_map;
 
     if (filename == NULL || records == NULL || max_records <= 0) {
         fprintf(stderr, "Invalid arguments passed to load_csv_data().\n");
@@ -101,36 +371,33 @@ int load_csv_data(const char *filename, UniversityRecord records[], int max_reco
         return 0;
     }
 
+    if (fgets(line, sizeof(line), fp) == NULL) {
+        fprintf(stderr, "Error: CSV file is empty.\n");
+        fclose(fp);
+        return 0;
+    }
+
+    line_number = 1;
+    trim_newline(line);
+    strip_utf8_bom(line);
+    parse_status = parse_csv_row(line, fields, CSV_EXPECTED_COLUMNS, &field_count);
+    if (parse_status != CSV_PARSE_OK) {
+        fprintf(stderr, "Error: failed to parse CSV header.\n");
+        report_csv_error(line_number, parse_status);
+        fclose(fp);
+        return 0;
+    }
+
+    if (!validate_and_map_header(fields, field_count, &header_map)) {
+        fclose(fp);
+        return 0;
+    }
+
     while (fgets(line, sizeof(line), fp) != NULL) {
-        char *fields[MAX_FIELDS];
-        int field_count;
-        char temp_line[CSV_LINE_LEN];
-
+        line_number++;
         trim_newline(line);
+
         if (line[0] == '\0') {
-            continue;
-        }
-
-        strncpy(temp_line, line, sizeof(temp_line) - 1);
-        temp_line[sizeof(temp_line) - 1] = '\0';
-        field_count = split_csv_line(temp_line, fields, MAX_FIELDS);
-
-        if (is_header) {
-            /* Detect field indices from header */
-            for (int i = 0; i < field_count; i++) {
-                char header[64];
-                safe_copy_string(header, sizeof(header), fields[i]);
-                trim_whitespace(header);
-                to_lowercase(header);
-
-                if (strstr(header, "university") || strstr(header, "name")) idx_name = i;
-                else if (strstr(header, "country") || strstr(header, "region")) idx_country = i;
-                else if (strstr(header, "rank min")) idx_rank_min = i;
-                else if (strstr(header, "rank max")) idx_rank_max = i;
-                else if (strstr(header, "rank")) idx_rank_legacy = i;
-                else if (strstr(header, "score")) idx_score = i;
-            }
-            is_header = 0;
             continue;
         }
 
@@ -139,35 +406,24 @@ int load_csv_data(const char *filename, UniversityRecord records[], int max_reco
             break;
         }
 
-        /* Mandatory fields check */
-        if (idx_name == -1 || idx_country == -1) {
-            fprintf(stderr, "Error: Required columns (University, Country) not found in CSV header.\n");
-            break;
+        parse_status = parse_csv_row(line, fields, CSV_EXPECTED_COLUMNS, &field_count);
+        if (parse_status != CSV_PARSE_OK) {
+            report_csv_error(line_number, parse_status);
+            continue;
         }
 
-        initialize_record(&records[record_count]);
-
-        /* Map University Name */
-        if (idx_name < field_count) {
-            safe_copy_string(records[record_count].raw_name, NAME_LEN, fields[idx_name]);
+        if (field_count != CSV_EXPECTED_COLUMNS) {
+            fprintf(stderr,
+                    "CSV warning at line %d: expected %d columns, got %d.\n",
+                    line_number,
+                    CSV_EXPECTED_COLUMNS,
+                    field_count);
+            continue;
         }
 
-        /* Map Country */
-        if (idx_country < field_count) {
-            safe_copy_string(records[record_count].raw_country, COUNTRY_LEN, fields[idx_country]);
-        }
-
-        /* Map Rank */
-        if (idx_rank_min != -1 && idx_rank_max != -1 && idx_rank_min < field_count && idx_rank_max < field_count) {
-            /* If we have discrete Min/Max columns, combine them for the parser or set directly */
-            snprintf(records[record_count].raw_rank, RANK_STR_LEN, "%s-%s", fields[idx_rank_min], fields[idx_rank_max]);
-        } else if (idx_rank_legacy != -1 && idx_rank_legacy < field_count) {
-            safe_copy_string(records[record_count].raw_rank, RANK_STR_LEN, fields[idx_rank_legacy]);
-        }
-
-        /* Map Score */
-        if (idx_score != -1 && idx_score < field_count) {
-            safe_copy_string(records[record_count].raw_score, SCORE_STR_LEN, fields[idx_score]);
+        if (!map_row_to_record(fields, field_count, &header_map, &records[record_count])) {
+            fprintf(stderr, "CSV warning at line %d: failed to map row into record.\n", line_number);
+            continue;
         }
 
         record_count++;

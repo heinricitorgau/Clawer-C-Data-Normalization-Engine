@@ -1,13 +1,55 @@
-
-
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "csv_reader.h"
+#include "csv_writer.h"
 #include "record.h"
 #include "normalizer.h"
 
 static int tests_run = 0;
 static int tests_passed = 0;
+
+#define TEST_FILE_BUFFER_SIZE 4096
+
+static int write_text_file(const char *filename, const char *content) {
+    FILE *fp = fopen(filename, "w");
+
+    if (fp == NULL) {
+        return 0;
+    }
+
+    if (fputs(content, fp) == EOF) {
+        fclose(fp);
+        return 0;
+    }
+
+    return fclose(fp) == 0;
+}
+
+static int read_text_file(const char *filename, char *buffer, size_t buffer_size) {
+    FILE *fp;
+    size_t bytes_read;
+
+    if (filename == NULL || buffer == NULL || buffer_size == 0) {
+        return 0;
+    }
+
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        return 0;
+    }
+
+    bytes_read = fread(buffer, 1, buffer_size - 1, fp);
+    buffer[bytes_read] = '\0';
+
+    if (ferror(fp)) {
+        fclose(fp);
+        return 0;
+    }
+
+    return fclose(fp) == 0;
+}
 
 static void print_test_result(const char *test_name, int passed) {
     tests_run++;
@@ -126,6 +168,124 @@ static void test_normalize_record_pipeline(void) {
                       record.score > 98.39 && record.score < 98.41);
 }
 
+static void test_csv_writer_escapes_comma_and_quotes(void) {
+    const char *filename = "build/test_writer_escape.csv";
+    char output[TEST_FILE_BUFFER_SIZE];
+    UniversityRecord record;
+
+    memset(&record, 0, sizeof(record));
+    strcpy(record.normalized_name, "King's College, London");
+    strcpy(record.normalized_country, "He said \"UK\"");
+    record.rank_min = 35;
+    record.rank_max = 35;
+    record.score = 91.5;
+
+    if (!write_normalized_csv(filename, &record, 1) ||
+        !read_text_file(filename, output, sizeof(output))) {
+        print_test_result("csv_writer: escape comma and quotes", 0);
+        remove(filename);
+        return;
+    }
+
+    print_test_result("csv_writer: escape comma and quotes",
+                      strstr(output, "\"King's College, London\",\"He said \"\"UK\"\"\",35,35,91.50\n") != NULL);
+    remove(filename);
+}
+
+static void test_csv_writer_quotes_newline_field(void) {
+    const char *filename = "build/test_writer_newline.csv";
+    char output[TEST_FILE_BUFFER_SIZE];
+    UniversityRecord record;
+
+    memset(&record, 0, sizeof(record));
+    strcpy(record.normalized_name, "Line One\nLine Two");
+    strcpy(record.normalized_country, "Singapore");
+    record.rank_min = 8;
+    record.rank_max = 8;
+    record.score = 95.0;
+
+    if (!write_normalized_csv(filename, &record, 1) ||
+        !read_text_file(filename, output, sizeof(output))) {
+        print_test_result("csv_writer: quote newline field", 0);
+        remove(filename);
+        return;
+    }
+
+    print_test_result("csv_writer: quote newline field",
+                      strstr(output, "\"Line One\nLine Two\",Singapore,8,8,95.00\n") != NULL);
+    remove(filename);
+}
+
+static void test_csv_reader_rejects_malformed_header(void) {
+    const char *filename = "build/test_bad_header.csv";
+    UniversityRecord records[4];
+    int count;
+    const char *csv_content =
+        "University,Country,Rank,Score\n"
+        "MIT,United States,1,98.4\n";
+
+    if (!write_text_file(filename, csv_content)) {
+        print_test_result("csv_reader: malformed header", 0);
+        remove(filename);
+        return;
+    }
+
+    count = load_csv_data(filename, records, 4);
+    print_test_result("csv_reader: malformed header", count == 0);
+    remove(filename);
+}
+
+static void test_csv_reader_skips_malformed_row(void) {
+    const char *filename = "build/test_bad_row.csv";
+    UniversityRecord records[4];
+    int count;
+    const char *csv_content =
+        "University,Country,Rank Min,Rank Max,Overall Score\n"
+        "\"Bad Row,United States,1,1,99.0\n"
+        "MIT,United States,1,1,98.4\n";
+
+    if (!write_text_file(filename, csv_content)) {
+        print_test_result("csv_reader: malformed row skipped", 0);
+        remove(filename);
+        return;
+    }
+
+    count = load_csv_data(filename, records, 4);
+    print_test_result("csv_reader: malformed row skipped",
+                      count == 1 &&
+                      strcmp(records[0].raw_name, "MIT") == 0 &&
+                      strcmp(records[0].raw_country, "United States") == 0);
+    remove(filename);
+}
+
+static void test_csv_round_trip_with_escaped_fields(void) {
+    const char *filename = "build/test_round_trip.csv";
+    UniversityRecord output_record;
+    UniversityRecord loaded_records[2];
+    int count;
+
+    memset(&output_record, 0, sizeof(output_record));
+    strcpy(output_record.normalized_name, "College, of \"Engineering\"");
+    strcpy(output_record.normalized_country, "Bosnia, \"Region\"");
+    output_record.rank_min = 12;
+    output_record.rank_max = 20;
+    output_record.score = 88.75;
+
+    if (!write_normalized_csv(filename, &output_record, 1)) {
+        print_test_result("csv round trip: escaped fields", 0);
+        remove(filename);
+        return;
+    }
+
+    count = load_csv_data(filename, loaded_records, 2);
+    print_test_result("csv round trip: escaped fields",
+                      count == 1 &&
+                      strcmp(loaded_records[0].raw_name, "College, of \"Engineering\"") == 0 &&
+                      strcmp(loaded_records[0].raw_country, "Bosnia, \"Region\"") == 0 &&
+                      strcmp(loaded_records[0].raw_rank, "12-20") == 0);
+    remove(filename);
+}
+
 int main(void) {
     printf("==== Clawer C Data Normalization Engine Tests ====\n\n");
 
@@ -141,6 +301,11 @@ int main(void) {
     test_parse_score_plain();
     test_parse_score_with_label();
     test_normalize_record_pipeline();
+    test_csv_writer_escapes_comma_and_quotes();
+    test_csv_writer_quotes_newline_field();
+    test_csv_reader_rejects_malformed_header();
+    test_csv_reader_skips_malformed_row();
+    test_csv_round_trip_with_escaped_fields();
 
     printf("\n==== Test Summary ====\n");
     printf("Passed: %d / %d\n", tests_passed, tests_run);

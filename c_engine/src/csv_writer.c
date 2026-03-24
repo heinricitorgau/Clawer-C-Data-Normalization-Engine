@@ -1,6 +1,5 @@
-
-
 #include <stdio.h>
+#include <string.h>
 
 #include "csv_writer.h"
 
@@ -12,6 +11,66 @@
  * This module writes normalized records to a CSV file so the pipeline becomes:
  * Raw CSV -> Load -> Normalize -> Export Clean CSV
  */
+
+/*
+ * needs_csv_quotes
+ *
+ * Returns 1 if a field must be quoted in CSV output.
+ */
+static int needs_csv_quotes(const char *field) {
+    size_t i;
+
+    if (field == NULL) {
+        return 0;
+    }
+
+    for (i = 0; field[i] != '\0'; i++) {
+        if (field[i] == ',' || field[i] == '"' || field[i] == '\n' || field[i] == '\r') {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * write_csv_field
+ *
+ * Writes a single CSV field, quoting and escaping it when needed.
+ */
+static int write_csv_field(FILE *fp, const char *field) {
+    size_t i;
+
+    if (fp == NULL) {
+        return 0;
+    }
+
+    if (field == NULL) {
+        field = "";
+    }
+
+    if (!needs_csv_quotes(field)) {
+        return fprintf(fp, "%s", field) >= 0;
+    }
+
+    if (fputc('"', fp) == EOF) {
+        return 0;
+    }
+
+    for (i = 0; field[i] != '\0'; i++) {
+        if (field[i] == '"') {
+            if (fputc('"', fp) == EOF || fputc('"', fp) == EOF) {
+                return 0;
+            }
+        } else {
+            if (fputc((unsigned char)field[i], fp) == EOF) {
+                return 0;
+            }
+        }
+    }
+
+    return fputc('"', fp) != EOF;
+}
 
 /*
  * write_normalized_csv
@@ -40,25 +99,36 @@ int write_normalized_csv(const char *filename, const UniversityRecord records[],
         return 0;
     }
 
-    fprintf(fp, "University,Country,Rank Min,Rank Max,Overall Score\n");
+    if (fprintf(fp, "University,Country,Rank Min,Rank Max,Overall Score\n") < 0) {
+        fclose(fp);
+        return 0;
+    }
 
     for (i = 0; i < count; i++) {
+        if (!write_csv_field(fp, records[i].normalized_name) ||
+            fputc(',', fp) == EOF ||
+            !write_csv_field(fp, records[i].normalized_country) ||
+            fprintf(fp, ",%d,%d,", records[i].rank_min, records[i].rank_max) < 0) {
+            fclose(fp);
+            return 0;
+        }
+
         if (records[i].score < 0) {
-            fprintf(fp, "%s,%s,%d,%d,\n",
-                    records[i].normalized_name,
-                    records[i].normalized_country,
-                    records[i].rank_min,
-                    records[i].rank_max);
+            if (fputc('\n', fp) == EOF) {
+                fclose(fp);
+                return 0;
+            }
         } else {
-            fprintf(fp, "%s,%s,%d,%d,%.2f\n",
-                    records[i].normalized_name,
-                    records[i].normalized_country,
-                    records[i].rank_min,
-                    records[i].rank_max,
-                    records[i].score);
+            if (fprintf(fp, "%.2f\n", records[i].score) < 0) {
+                fclose(fp);
+                return 0;
+            }
         }
     }
 
-    fclose(fp);
+    if (fclose(fp) != 0) {
+        return 0;
+    }
+
     return 1;
 }
