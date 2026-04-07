@@ -3,11 +3,6 @@ CFLAGS = -Wall -Wextra -std=c11 -Iinclude
 SRC_DIR = src
 BUILD_DIR = build
 
-TARGET = $(BUILD_DIR)/clawer_normalizer
-TEST_TARGET = $(BUILD_DIR)/test_normalizer
-TEST_SRC = src/tests/test_normalizer.c
-TEST_OBJS = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_normalizer.o
-
 SRCS = \
 	$(SRC_DIR)/main.c \
 	$(SRC_DIR)/normalizer.c \
@@ -21,6 +16,10 @@ SRCS = \
 	$(SRC_DIR)/utils.c
 
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+TARGET = $(BUILD_DIR)/clawer_normalizer
+TEST_TARGET = $(BUILD_DIR)/test_normalizer
+TEST_SRC = src/tests/test_normalizer.c
+TEST_OBJS = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_normalizer.o
 
 .PHONY: all run test clean rebuild
 

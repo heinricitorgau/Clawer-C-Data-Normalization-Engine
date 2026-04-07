@@ -13,51 +13,17 @@
  *
  * Goals:
  * - clean whitespace
- * - remove bracketed aliases such as "(UCB)"
+ * - preserve meaningful aliases such as "(UCB)"
  * - expand a few safe abbreviations
  * - keep names readable
  * - avoid aggressive destructive normalization
  */
-
-/*
- * remove_parenthesized_content
- *
- * Removes parentheses and any text inside them.
- * Example: "University (UCB)" -> "University "
- */
-static void remove_parenthesized_content(char *str) {
-    size_t read_idx = 0;
-    size_t write_idx = 0;
-    int depth = 0;
-
-    if (str == NULL) {
-        return;
-    }
-
-    while (str[read_idx] != '\0') {
-        char ch = str[read_idx];
-
-        if (ch == '(') {
-            depth++;
-        } else if (ch == ')') {
-            if (depth > 0) {
-                depth--;
-            }
-        } else if (depth == 0) {
-            str[write_idx++] = ch;
-        }
-
-        read_idx++;
-    }
-
-    str[write_idx] = '\0';
-}
-
 /*
  * normalize_name_punctuation
  *
  * Replaces punctuation that commonly acts as a separator with spaces.
- * Apostrophes and hyphens are preserved to avoid damaging valid names.
+ * Apostrophes, hyphens, and parentheses are preserved to avoid damaging
+ * valid university names and aliases.
  */
 static void normalize_name_punctuation(char *str) {
     size_t read_idx = 0;
@@ -300,7 +266,7 @@ static void apply_readable_name_case(char *str) {
                         }
                     } else {
                         result[write_idx++] = (char)ch;
-                        capitalize_next = (ch == '-');
+                        capitalize_next = (ch == '-' || ch == '(');
                     }
                 }
             }
@@ -320,7 +286,6 @@ static void apply_readable_name_case(char *str) {
  *
  * Strategy:
  * - trim whitespace
- * - remove parenthesized aliases
  * - normalize punctuation separators
  * - collapse spaces
  * - expand a few safe abbreviations
@@ -336,7 +301,6 @@ void normalize_name(const char *input, char *output, int size) {
 
     safe_copy_string(working, sizeof(working), input);
     trim_whitespace(working);
-    remove_parenthesized_content(working);
     normalize_name_punctuation(working);
     collapse_spaces(working);
     trim_whitespace(working);
