@@ -43,3 +43,7 @@ make run
 
 ---
 *註：規規化流程會移除多餘標點符號、統一轉換小寫，並將排名區間（如 101-150）解析為數值格式。*
+
+## License
+
+This project is licensed under the Apache License 2.0.
