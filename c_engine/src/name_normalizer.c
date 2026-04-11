@@ -112,7 +112,7 @@ static void expand_common_abbreviations(const char *input, char *output, size_t 
     output[0] = '\0';
 
     while (input[read_idx] != '\0') {
-        char word[64];
+        char word[NAME_WORK_LEN];  /* large enough for any single token */
         size_t word_len = 0;
         const char *replacement;
         size_t replacement_len;
@@ -150,23 +150,51 @@ static void expand_common_abbreviations(const char *input, char *output, size_t 
 /*
  * is_name_acronym
  *
- * Preserves a few common university acronyms in uppercase.
+ * Preserves common university acronyms in uppercase.
+ *
+ * Also handles parenthetical forms such as "(UCB)" by stripping the
+ * surrounding parentheses before checking, so that the entire token
+ * "(UCB)" is still recognised and kept in UPPER CASE.
  */
 static int is_name_acronym(const char *word, size_t len) {
-    const char *acronyms[] = {
-        "MIT", "UCB", "UCLA", "UCSD", "UC", "NUS", "NTU", "NYU", "UCL", "EPFL", NULL
+    static const char *acronyms[] = {
+        /* Flagship / well-known */
+        "MIT", "UCB", "UCLA", "UCSD", "UC", "NUS", "NTU", "NYU", "UCL", "EPFL",
+        /* Extended list (synced with utils.c is_acronym) */
+        "KAIST", "POSTECH", "LSE", "KTH", "ANU", "UNSW", "CUHK",
+        "UBA", "UNAM",
+        NULL
     };
-    char upper[32];
-    int i;
+    /* Strip one layer of parentheses so "(UCB)" is treated as "UCB" */
+    size_t start = 0, end = len;
+    char   upper[32];
+    int    i;
 
-    if (len == 0 || len >= sizeof(upper)) {
+    if (len == 0) {
         return 0;
     }
 
-    for (i = 0; i < (int)len; i++) {
-        upper[i] = (char)toupper((unsigned char)word[i]);
+    if (word[0] == '(') {
+        start = 1;
     }
-    upper[len] = '\0';
+    if (len > 0 && word[len - 1] == ')') {
+        end = len - 1;
+    }
+
+    if (end <= start) {
+        return 0;
+    }
+
+    {
+        size_t inner_len = end - start;
+        if (inner_len >= sizeof(upper)) {
+            return 0;
+        }
+        for (i = 0; i < (int)inner_len; i++) {
+            upper[i] = (char)toupper((unsigned char)word[start + (size_t)i]);
+        }
+        upper[inner_len] = '\0';
+    }
 
     for (i = 0; acronyms[i] != NULL; i++) {
         if (strcmp(upper, acronyms[i]) == 0) {
@@ -232,7 +260,7 @@ static void apply_readable_name_case(char *str) {
         }
 
         {
-            char word[64];
+            char word[NAME_WORK_LEN];  /* large enough for any single token */
             size_t word_len = 0;
             size_t i;
 

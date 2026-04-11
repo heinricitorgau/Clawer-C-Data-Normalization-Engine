@@ -21,7 +21,11 @@ TEST_TARGET = $(BUILD_DIR)/test_normalizer
 TEST_SRC = src/tests/test_normalizer.c
 TEST_OBJS = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_normalizer.o
 
-.PHONY: all run test clean rebuild
+TEST_EXTREME_TARGET = $(BUILD_DIR)/test_extreme
+TEST_EXTREME_SRC    = src/tests/test_extreme.c
+TEST_EXTREME_OBJS   = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_extreme.o
+
+.PHONY: all run test test_extreme clean rebuild
 
 all: $(TARGET)
 
@@ -46,6 +50,17 @@ run: $(TARGET)
 
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
+
+test_extreme: $(TEST_EXTREME_TARGET)
+	./$(TEST_EXTREME_TARGET)
+
+$(TEST_EXTREME_TARGET): $(TEST_EXTREME_OBJS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(TEST_EXTREME_OBJS) -o $(TEST_EXTREME_TARGET)
+
+$(BUILD_DIR)/test_extreme.o: $(TEST_EXTREME_SRC)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $(TEST_EXTREME_SRC) -o $(BUILD_DIR)/test_extreme.o
 
 clean:
 	rm -rf $(BUILD_DIR)
