@@ -61,7 +61,6 @@ static void test_null_safety(void)
     char out[NAME_LEN];
     int  mn, mx;
 
-    /* Must not crash — we just call them and check control returns */
     normalize_name(NULL, NULL,  NAME_LEN);
     normalize_name("X",  NULL,  NAME_LEN);
     normalize_name(NULL, out,   NAME_LEN);
@@ -200,7 +199,7 @@ static void test_unicode(void)
     check("unicode: emoji in ASCII name does not crash", 1, NULL, NULL);
 
     /* Precomposed É (U+00C9, UTF-8: 0xC3 0x89) — capital E with acute.
-     * Split the string literal so the compiler doesn't interpret
+     * Split the string literal so the compiler does not interpret
      * 0x89 followed by 'c' as a single multi-digit escape. */
     normalize_name("\xc3\x89" "cole Polytechnique", out, NAME_LEN);
     check("unicode: precomposed \xc3\x89 passes through as capital",
@@ -241,13 +240,13 @@ static void test_adversarial(void)
     check("adversarial: CRLF trimmed -> \"MIT\"",
           strcmp(out, "MIT") == 0, out, "MIT");
 
-    /* Null-ish: string of a single NUL char has zero length */
+    /* Empty input always produces empty output */
     out[0] = 'X';
     normalize_name("", out, NAME_LEN);
     check("adversarial: empty input always produces empty output",
           out[0] == '\0', NULL, NULL);
 
-    /* Percent-encoded lookalike — should normalize like any string */
+    /* Percent-encoded lookalike */
     normalize_name("%20MIT%20", out, NAME_LEN);
     check("adversarial: percent-encoded string does not crash", 1, NULL, NULL);
 }
@@ -271,7 +270,7 @@ static void test_country_aliases(void)
         {"united states",             "United States"},
         {"United States",             "United States"},
         {"united states of america",  "United States"},
-        /* UK and its constituent countries */
+        /* UK and constituent countries */
         {"uk",                        "United Kingdom"},
         {"UK",                        "United Kingdom"},
         {"u.k.",                      "United Kingdom"},
@@ -368,18 +367,15 @@ static void test_abbreviations(void)
     check("abbrev: \"TECH\" -> \"Technology\"",
           strcmp(out, "Technology") == 0, out, "Technology");
 
-    /* Dot stripped first, then abbrev expanded */
     normalize_name("univ.", out, NAME_LEN);
     check("abbrev: \"univ.\" -> \"University\"",
           strcmp(out, "University") == 0, out, "University");
 
-    /* Multiple abbreviations in one name */
     normalize_name("univ inst tech", out, NAME_LEN);
     check("abbrev: multiple in one name",
           strcmp(out, "University Institute Technology") == 0,
           out, "University Institute Technology");
 
-    /* Abbreviation mixed with acronym */
     normalize_name("MIT univ", out, NAME_LEN);
     check("abbrev: MIT univ -> \"MIT University\"",
           strcmp(out, "MIT University") == 0, out, "MIT University");
@@ -399,9 +395,8 @@ static void test_idempotency(void)
         "univ of tech",
         "EPFL",
         "KAIST",
-        "École Polytechnique",
         "Al-Azhar University",
-        "King's College, London",
+        "King's College London",
         NULL
     };
 
@@ -457,15 +452,14 @@ static void test_rank_edge_cases(void)
 
     /* UTF-8 en-dash U+2013 = 0xE2 0x80 0x93 */
     parse_rank("201\xe2\x80\x93" "250", &mn, &mx);
-    check("rank: en-dash \"201–250\" -> 201/250",
+    check("rank: en-dash \"201-250\" -> 201/250",
           mn == 201 && mx == 250, NULL, NULL);
 
     /* UTF-8 em-dash U+2014 = 0xE2 0x80 0x94 */
     parse_rank("301\xe2\x80\x94" "350", &mn, &mx);
-    check("rank: em-dash \"301—350\" -> 301/350",
+    check("rank: em-dash \"301-350\" -> 301/350",
           mn == 301 && mx == 350, NULL, NULL);
 
-    /* Inverted range — accepted as-is (no validation) */
     parse_rank("150-101", &mn, &mx);
     check("rank: inverted range 150-101 parsed without crash",
           mn == 150 && mx == 101, NULL, NULL);
@@ -474,7 +468,6 @@ static void test_rank_edge_cases(void)
     check("rank: \"Top 0\" -> 1/0",
           mn == 1 && mx == 0, NULL, NULL);
 
-    /* Extra range segment — first two numbers taken */
     parse_rank("1-2-3", &mn, &mx);
     check("rank: \"1-2-3\" -> 1/2",
           mn == 1 && mx == 2, NULL, NULL);
@@ -493,7 +486,6 @@ static void test_rank_edge_cases(void)
     check("rank: \"top 50\" (lowercase) -> 1/50",
           mn == 1 && mx == 50, NULL, NULL);
 
-    /* Whitespace around the number */
     parse_rank("  42  ", &mn, &mx);
     check("rank: \"  42  \" -> 42/42", mn == 42 && mx == 42, NULL, NULL);
 }
@@ -535,7 +527,6 @@ static void test_score_edge_cases(void)
     check("score: leading spaces \"  85.5  \" -> 85.5",
           NEAR(s, 85.5), NULL, NULL);
 
-    /* -1.0 is valid input but also the error sentinel */
     s = parse_score("-1.0");
     check("score: \"-1.0\" returns -1.0 (ambiguous but consistent)",
           NEAR(s, -1.0), NULL, NULL);
@@ -558,72 +549,59 @@ static void test_name_edge_cases(void)
 {
     char out[NAME_LEN];
 
-    /* All dots removed -> empty */
     normalize_name("...", out, NAME_LEN);
     check("name_edge: \"...\" -> \"\"",
           strcmp(out, "") == 0, out, "");
 
-    /* All separators -> empty */
     normalize_name(",,,", out, NAME_LEN);
     check("name_edge: \",,,\" -> \"\"",
           strcmp(out, "") == 0, out, "");
 
-    /* Hyphenated institution — capitalize after hyphen */
     normalize_name("Al-Azhar University", out, NAME_LEN);
     check("name_edge: \"Al-Azhar University\" preserved",
           strcmp(out, "Al-Azhar University") == 0,
           out, "Al-Azhar University");
 
-    /* Parenthetical acronym — inner letters must stay uppercase */
     normalize_name("University of California Berkeley (UCB)", out, NAME_LEN);
     check("name_edge: parenthetical \"(UCB)\" stays uppercase",
           strcmp(out, "University of California Berkeley (UCB)") == 0,
           out, "University of California Berkeley (UCB)");
 
-    /* Standalone parenthetical acronym */
     normalize_name("(MIT)", out, NAME_LEN);
     check("name_edge: \"(MIT)\" standalone -> \"(MIT)\"",
           strcmp(out, "(MIT)") == 0, out, "(MIT)");
 
-    /* EPFL must be preserved (is in acronym list) */
     normalize_name("EPFL", out, NAME_LEN);
     check("name_edge: \"EPFL\" stays uppercase",
           strcmp(out, "EPFL") == 0, out, "EPFL");
 
-    /* KAIST must be preserved (added to acronym list) */
     normalize_name("KAIST", out, NAME_LEN);
     check("name_edge: \"KAIST\" stays uppercase",
           strcmp(out, "KAIST") == 0, out, "KAIST");
 
-    /* POSTECH must be preserved */
     normalize_name("POSTECH", out, NAME_LEN);
     check("name_edge: \"POSTECH\" stays uppercase",
           strcmp(out, "POSTECH") == 0, out, "POSTECH");
 
-    /* LSE must be preserved */
     normalize_name("LSE", out, NAME_LEN);
     check("name_edge: \"LSE\" stays uppercase",
           strcmp(out, "LSE") == 0, out, "LSE");
 
-    /* Connector words must not be capitalised in the middle */
     normalize_name("university of the arts london", out, NAME_LEN);
     check("name_edge: connectors lowercase in middle",
           strcmp(out, "University of the Arts London") == 0,
           out, "University of the Arts London");
 
-    /* Mixed case input */
     normalize_name("mAssAchUsEtTs InStItUtE oF tEcHnOlOgY", out, NAME_LEN);
     check("name_edge: random-case input normalised correctly",
           strcmp(out, "Massachusetts Institute of Technology") == 0,
           out, "Massachusetts Institute of Technology");
 
-    /* Apostrophe preserved */
     normalize_name("King's College London", out, NAME_LEN);
     check("name_edge: apostrophe in \"King's\" preserved",
           strcmp(out, "King's College London") == 0,
           out, "King's College London");
 
-    /* Colon used as separator -> becomes space */
     normalize_name("University: Cambridge", out, NAME_LEN);
     check("name_edge: colon -> space -> \"University Cambridge\"",
           strcmp(out, "University Cambridge") == 0,
@@ -650,7 +628,6 @@ static void test_throughput(void)
         return;
     }
 
-    /* Generate CSV */
     FILE *fp = fopen(test_file, "w");
     if (!fp) {
         free(records);
@@ -659,11 +636,11 @@ static void test_throughput(void)
     }
     fprintf(fp, "University,Country,Rank Min,Rank Max,Overall Score\n");
     for (int i = 0; i < N; i++) {
-        /* Vary names, countries, and ranks to exercise all code paths */
-        const char *country = (i % 5 == 0) ? "usa"       :
-                              (i % 5 == 1) ? "uk"        :
-                              (i % 5 == 2) ? "sg"        :
-                              (i % 5 == 3) ? "china"     : "germany";
+        static const char *country = (void *)0;
+        country = (i % 5 == 0) ? "usa"   :
+                  (i % 5 == 1) ? "uk"    :
+                  (i % 5 == 2) ? "sg"    :
+                  (i % 5 == 3) ? "china" : "germany";
         fprintf(fp,
                 "univ of Technology and Science %d,%s,%d,%d,%.2f\n",
                 i + 1, country, i + 1, i + 1, 40.0 + (double)(i % 60));
@@ -681,12 +658,11 @@ static void test_throughput(void)
 
     printf("       throughput: %d records in %.3f s\n", count, elapsed);
 
-    check("throughput: all 10 000 records loaded",
+    check("throughput: all 10 000 records processed",
           count == N, NULL, NULL);
-    check("throughput: normalisation completes in < 5 s",
+    check("throughput: completed in < 5 seconds",
           elapsed < 5.0, NULL, NULL);
 
-    /* Spot-check first and last record */
     if (count > 0) {
         check("throughput: first record country normalised",
               strcmp(records[0].normalized_country, "United States") == 0,

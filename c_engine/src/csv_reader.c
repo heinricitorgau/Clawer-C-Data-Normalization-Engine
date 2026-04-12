@@ -395,6 +395,34 @@ int load_csv_data(const char *filename, UniversityRecord records[], int max_reco
 
     while (fgets(line, sizeof(line), fp) != NULL) {
         line_number++;
+
+        /*
+         * Detect fgets truncation.
+         *
+         * fgets reads at most sizeof(line)-1 = CSV_LINE_LEN-1 chars and
+         * always appends '\0'.  A complete line ends with '\n' (or is the
+         * final line in the file, which may lack a trailing newline).
+         *
+         * If the buffer is full AND the last char is not '\n' AND we are
+         * not yet at EOF, the physical line is longer than our buffer.
+         * Reading the rest of the line and parsing the truncated first
+         * chunk would create a "zombie record" with corrupted fields.
+         * Instead we drain the remainder and skip the entire line.
+         */
+        {
+            size_t linelen = strlen(line);
+            if (linelen == CSV_LINE_LEN - 1 &&
+                line[CSV_LINE_LEN - 2] != '\n' &&
+                !feof(fp)) {
+                int ch;
+                fprintf(stderr,
+                        "CSV warning at line %d: line exceeds %d bytes, skipping.\n",
+                        line_number, CSV_LINE_LEN - 1);
+                while ((ch = fgetc(fp)) != EOF && ch != '\n') { /* drain */ }
+                continue;
+            }
+        }
+
         trim_newline(line);
 
         if (line[0] == '\0') {
