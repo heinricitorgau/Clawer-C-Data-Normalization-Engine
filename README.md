@@ -1,117 +1,141 @@
 # crawlernest-normalization
 
-數據規規化引擎，用於標準化大學名稱、國家及成績分數。
+大學排名資料的正規化引擎，用於將爬蟲產出的 CSV 標準化為統一的大學名稱、國家名稱與數值分數格式。
 
-## 模組說明
-- **c_engine**: 使用 C 語言編寫的高效能規規化引擎。
-  - `src/`: 核心實作代碼。
-  - `include/`: 標頭檔。
-  - `Makefile`: 編譯腳本。
-  - `data/samples/`: 存放原始與規規化後的 CSV 檔案。
+## 研究問題
 
-## 使用說明 (C 引擎)
+> **在不修改下游分析邏輯的前提下，如何將異質性爬蟲輸出（多種大學名稱格式、排名區間字串、不一致的國家縮寫）轉換為可直接比較的數值紀錄？**
 
-此模組提供高效能的 CLI 工具，用於批次處理爬蟲產出的 CSV 數據。
+## 模組結構
+
+| 路徑 | 角色 |
+|------|------|
+| `c_engine/src/` | 核心正規化邏輯實作（C 語言）|
+| `c_engine/include/` | 公開介面標頭檔 |
+| `c_engine/Makefile` | 編譯腳本 |
+| `c_engine/data/samples/` | 原始與正規化後的 CSV 樣本 |
+| `c_engine/docs/architecture.md` | 模組架構與設計說明 |
+
+**設計選擇**：以 C 實作核心引擎，而非使用 Python/pandas，rationale 是在大量 CSV 批次處理時維持低記憶體佔用與可預期的執行時間，同時避免引入 Python 執行期依賴。
+
+## 使用說明（C 引擎）
 
 ### 1. 編譯引擎
-在 `c_engine` 目錄下執行以下指令：
+
 ```bash
 cd c_engine
 make
 ```
 
-### 2. 準備數據
-將爬蟲產出的 CSV 檔案（例如 `universities_world.csv`）複製到範例數據目錄：
+### 2. 準備輸入資料
+
+將爬蟲產出的 CSV 放入範例資料目錄：
+
 ```bash
 cp ../../universities_world.csv data/samples/raw_universities.csv
 ```
 
-### 3. 執行規規化
-執行編譯好的程式並按照選單操作：
+輸入 CSV 須包含以下欄位（欄位順序與名稱須符合）：
+
+```
+QS Rank,University,Country,GMAT,GRE,GPA,IELTS,TOEFL,Duolingo,Overall Score,URL
+```
+
+### 3. 執行正規化
+
 ```bash
 make run
 ```
-**選單操作步驟：**
-1.  輸入 `1`：載入 CSV 資料。
-2.  輸入 `3`：執行完整正規化流程（清洗名稱、解析排名區間、提取分數）。
-3.  輸入 `4`：預覽規規化後的結果。
-4.  輸入 `5`：將結果匯出成新的 `.csv` 檔。
+
+選單操作序列：
+
+| 步驟 | 選單選項 | 動作 |
+|------|---------|------|
+| 1 | `1` | 載入 CSV 資料 |
+| 2 | `3` | 執行完整正規化流程 |
+| 3 | `4` | 預覽正規化後的結果 |
+| 4 | `5` | 匯出結果為 `.csv` 檔 |
+| 5 | `0` | 離開程式 |
 
 ### 4. 查看結果
-規規化後的檔案預設儲存在：
-`data/samples/normalized_universities.csv`
 
-## 測試指引
+正規化後的輸出預設儲存於：
 
-以下是在本機快速驗證 normalization 引擎的建議流程。
+```
+data/samples/normalized_universities.csv
+```
 
-### 1. 執行單元測試
-在 `c_engine` 目錄下執行：
+輸出格式：
+
+```csv
+University,Country,Rank Min,Rank Max,Overall Score
+University of California Berkeley (Ucb),United States,12,14,91.70
+```
+
+## 驗證流程
+
+### 單元測試
+
 ```bash
 cd c_engine
 make test
 ```
 
 預期結果：
-- 顯示 `Passed: 17 / 17`
-- 顯示 `All tests passed.`
 
-此測試會驗證：
-- 大學名稱正規化
-- 國家名稱正規化
-- 排名區間解析
-- 分數解析
-- CSV 讀寫與 escaping
+```
+Passed: 17 / 17
+All tests passed.
+```
 
-### 2. 執行互動式整體測試
-先確認輸入檔存在：
+單元測試涵蓋的驗證範圍：
+
+| 測試類別 | 驗證內容 |
+|---------|---------|
+| 大學名稱正規化 | 移除標點、轉小寫、壓縮空白 |
+| 國家名稱正規化 | 縮寫展開（如 `U.S.A.` → `United States`）|
+| 排名區間解析 | `53`、`101-150`、`Top 100` 等格式 |
+| 分數解析 | 數字字串提取、無效值標記為 `-1` |
+| CSV 讀寫與 escaping | 欄位分隔、引號處理 |
+
+### 互動式整體測試
+
+確認輸入檔存在：
+
 ```bash
 ls data/samples/raw_universities.csv
 ```
 
-再執行：
-```bash
-make run
-```
+再執行 `make run`，依序輸入：`1`、`3`、`4`、`5`、`0`。
 
-建議依序輸入以下選單選項：
-1. `1`：載入 CSV 資料
-2. `3`：執行完整正規化流程
-3. `4`：預覽正規化後資料
-4. `5`：匯出正規化結果到 CSV
-5. `0`：離開程式
+### 一鍵快速驗證
 
-### 3. 一鍵快速驗證
-如果你想快速驗證 sample data 能否正常跑完整流程，可以在 `c_engine` 目錄下執行：
 ```bash
 printf '1\n3\n5\n0\n' | ./build/clawer_normalizer
 ```
 
-如果尚未編譯，先執行：
-```bash
-make
-```
+若尚未編譯，先執行 `make`。
 
-### 4. 檢查輸出結果
-匯出完成後，可直接查看結果：
+### 檢查輸出
+
 ```bash
 sed -n '1,20p' data/samples/normalized_universities.csv
 ```
 
-目前 sample 的預期輸出格式如下：
-```csv
-University,Country,Rank Min,Rank Max,Overall Score
-University of California Berkeley (Ucb),United States,12,14,91.70
-```
+## 常見問題
 
-### 5. 常見問題
-- 如果 `make test` 失敗，先執行 `make clean && make test` 重新編譯。
-- 如果顯示 `載入失敗，請確認 CSV 檔案是否存在。`，請確認 `data/samples/raw_universities.csv` 路徑正確。
-- 如果 CSV header 欄位數或欄名不符合預期，reader 會拒絕載入。
-- 若要改用自己的資料，可將你的 CSV 覆蓋到 `data/samples/raw_universities.csv` 後重新執行。
+| 問題 | 原因與處理方式 |
+|------|--------------|
+| `make test` 失敗 | 先執行 `make clean && make test` 重新編譯 |
+| `載入失敗，請確認 CSV 檔案是否存在` | 確認 `data/samples/raw_universities.csv` 路徑正確 |
+| CSV header 欄位數或欄名不符合預期 | reader 會拒絕載入；確認輸入 CSV 格式符合 11 欄規格 |
+| 使用自訂資料 | 將 CSV 覆蓋至 `data/samples/raw_universities.csv` 後重新執行 |
 
----
-*註：規規化流程會移除多餘標點符號、統一轉換小寫，並將排名區間（如 101-150）解析為數值格式。*
+## 開放問題
+
+- 目前 `MAX_FIELDS = 11` 為硬編碼常數；若上游爬蟲增加欄位，reader 是否能優雅降級，還是需要修改常數？
+- 國家名稱對照表目前是靜態的；當新的縮寫出現時，更新流程是否有可維護的機制？
+- score parser 將無效分數標記為 `-1`；下游分析是否對此有明確的處理規則，還是依賴 writer 層的空值轉換？
 
 ## License
 
