@@ -294,7 +294,7 @@ static void apply_readable_name_case(char *str) {
                         }
                     } else {
                         result[write_idx++] = (char)ch;
-                        capitalize_next = (ch == '-' || ch == '(');
+                        capitalize_next = (ch == '-' || ch == '(' || ch == '/');
                     }
                 }
             }

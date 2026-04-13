@@ -7,14 +7,16 @@
 /*
  * rank_parser.c
  *
- * First-version rank parsing helpers.
+ * Rank parsing helpers.
  *
  * Supported examples:
  * - "53"          -> rank_min = 53, rank_max = 53
  * - "Rank 53"     -> rank_min = 53, rank_max = 53
  * - "101-150"     -> rank_min = 101, rank_max = 150
- * - "201–250"     -> rank_min = 201, rank_max = 250
+ * - "201–250"     -> rank_min = 201, rank_max = 250  (en/em dash)
  * - "Top 100"     -> rank_min = 1,   rank_max = 100
+ * - "=201"        -> rank_min = 201, rank_max = 201  (equal-sign prefix)
+ * - "201+"        -> rank_min = 201, rank_max = 201  (open-ended floor)
  *
  * If parsing fails, both values are set to -1.
  */
@@ -102,7 +104,14 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
         return;
     }
 
-    /* Case 4: plain integer */
+    /* Case 4: =N — explicit-equal notation (e.g., "=201" from some ranking sources) */
+    if (sscanf(temp, " =%d", &a) == 1) {
+        *rank_min = a;
+        *rank_max = a;
+        return;
+    }
+
+    /* Case 5: plain integer (also handles N+ because sscanf stops before '+') */
     if (sscanf(temp, " %d", &a) == 1) {
         *rank_min = a;
         *rank_max = a;
