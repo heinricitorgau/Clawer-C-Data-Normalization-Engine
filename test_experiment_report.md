@@ -1,114 +1,114 @@
-# 테스트 실험 보고서
+# 測試實驗報告
 
-**프로젝트:** crawlernest-normalization — C Data Normalization Engine  
-**실험 날짜:** 2026-04-13  
-**담당:** 자동화 실험 시스템 (Claude)
-
----
-
-## 1. 실험 목적
-
-대학 순위 데이터 정규화 엔진(C 언어)의 전체 코드를 체계적으로 분석하여 다음 세 가지를 수행한다.
-
-1. 기존 테스트 스위트의 기준선 측정
-2. 미커버 또는 취약한 영역 식별 및 신규 테스트 케이스 작성
-3. 발견된 버그 수정 후 전체 회귀 검증
+**專案：** crawlernest-normalization — C 資料正規化引擎  
+**實驗日期：** 2026-04-13  
+**負責人：** 自動化實驗系統 (Claude)
 
 ---
 
-## 2. 기존 테스트 기준선 (수정 전)
+## 1. 實驗目的
 
-| 테스트 스위트 | 파일 | 결과 |
+對大學排名資料正規化引擎（C 語言）的完整程式碼進行系統性分析，並執行以下三項工作：
+
+1. 測量既有測試套件的基準數據
+2. 識別未覆蓋或脆弱的區域，並撰寫新測試案例
+3. 修復發現的錯誤後進行完整的回歸驗證
+
+---
+
+## 2. 既有測試基準（修改前）
+
+| 測試套件 | 檔案 | 結果 |
 |-------------|------|------|
 | `test_normalizer` | `src/tests/test_normalizer.c` | **17 / 17** ✅ |
 | `test_extreme` | `src/tests/test_extreme.c` | **139 / 139** ✅ |
 | `test_scale` | `src/tests/test_scale.c` | **31 / 31** ✅ |
-| **합계** | | **187 / 187** |
+| **合計** | | **187 / 187** |
 
-세 스위트 모두 이미 통과 상태이며 컴파일 경고도 없다.
+三個套件均已通過，且無編譯警告。
 
 ---
 
-## 3. 취약점 분석 결과
+## 3. 弱點分析結果
 
-소스 코드 전체를 검토한 후 12개 취약 영역을 식별했다.
+完整審查原始碼後，共識別出 12 個脆弱區域。
 
-### 3.1 확인된 버그 (수정 완료)
+### 3.1 已確認的錯誤（已修復）
 
-#### Bug-1 — `rank_parser.c`: `=N` 포맷 미처리
+#### Bug-1 — `rank_parser.c`：未處理 `=N` 格式
 
-| 항목 | 내용 |
+| 項目 | 內容 |
 |------|------|
-| 파일 | `c_engine/src/rank_parser.c` |
-| 증상 | `parse_rank("=201")` → `-1 / -1` (파싱 실패) |
-| 기대 | `rank_min = 201, rank_max = 201` |
-| 원인 | `sscanf` 패턴 목록에 `=N` 형식이 없음 |
-| 수정 | `Case 4: =N` 추가 (`sscanf(" =%d", &a)`) |
-| 중요도 | **High** — QS 순위 데이터에서 실제로 사용되는 표기 |
+| 檔案 | `c_engine/src/rank_parser.c` |
+| 症狀 | `parse_rank("=201")` → `-1 / -1`（解析失敗） |
+| 預期 | `rank_min = 201, rank_max = 201` |
+| 原因 | `sscanf` 的模式列表中缺少 `=N` 格式 |
+| 修復 | 新增 `Case 4: =N`（`sscanf(" =%d", &a)`） |
+| 重要度 | **高** — QS 排名資料中實際使用的標記方式 |
 
-#### Bug-2 — `name_normalizer.c`: 슬래시(`/`) 뒤 문자 소문자화
+#### Bug-2 — `name_normalizer.c`：斜線（`/`）後的字元未大寫化
 
-| 항목 | 내용 |
+| 項目 | 內容 |
 |------|------|
-| 파일 | `c_engine/src/name_normalizer.c` |
-| 증상 | `normalize_name("Arts/Sciences")` → `"Arts/sciences"` (S가 소문자) |
-| 기대 | `"Arts/Sciences"` |
-| 원인 | `apply_readable_name_case()` 내 `capitalize_next` 플래그가 `-`와 `(` 이후만 설정되고 `/` 이후는 누락 |
-| 수정 | `capitalize_next = (ch == '-' \|\| ch == '(' \|\| ch == '/')` |
-| 중요도 | **Medium** — 대학명에 `/` 포함 사례 (예: `Arts/Sciences School`) |
+| 檔案 | `c_engine/src/name_normalizer.c` |
+| 症狀 | `normalize_name("Arts/Sciences")` → `"Arts/sciences"`（S 變成小寫） |
+| 預期 | `"Arts/Sciences"` |
+| 原因 | `apply_readable_name_case()` 中的 `capitalize_next` 旗標僅在 `-` 與 `(` 之後設定，缺少 `/` 之後的設定 |
+| 修復 | `capitalize_next = (ch == '-' \|\| ch == '(' \|\| ch == '/')` |
+| 重要度 | **中** — 大學名稱中含有 `/` 的情況（如：`Arts/Sciences School`） |
 
-### 3.2 설계 한계 (수정 제외, 문서화만)
+### 3.2 設計限制（不修復，僅文件化）
 
-| ID | 위치 | 내용 | 판단 |
+| ID | 位置 | 內容 | 判斷 |
 |----|------|------|------|
-| W3 | `rank_parser.c` | `#N` 형식 (`#10`) 미처리 → `-1/-1` | 추후 우선순위 판단 필요 |
-| W4 | `rank_parser.c` | 매우 큰 정수 입력 시 `sscanf %d` 오버플로 (UB) | 실운영 데이터에서 발생 가능성 낮음 |
-| W5 | `score_parser.c` | `-1.0` 입력이 "무효값 sentinel"과 충돌 | 대학 점수가 음수일 가능성 없어 실질 위험 없음 |
-| W10 | `csv_writer.c` | `rank_min > rank_max` 역전된 순위 저장 시 유효성 검사 없음 | 하위 계층에서 처리하도록 위임 가능 |
+| W3 | `rank_parser.c` | 未處理 `#N` 格式（`#10`）→ `-1/-1` | 待後續排定優先順序 |
+| W4 | `rank_parser.c` | 輸入非常大的整數時，`sscanf %d` 可能溢位（UB） | 在實際運行資料中發生的可能性低 |
+| W5 | `score_parser.c` | `-1.0` 輸入與「無效值 sentinel」衝突 | 大學分數不可能為負值，實質風險不高 |
+| W10 | `csv_writer.c` | 儲存 `rank_min > rank_max` 反轉排名時無驗證 | 可委由下層處理 |
 
 ---
 
-## 4. 신규 테스트 케이스 (test_weakness.c)
+## 4. 新增測試案例（test_weakness.c）
 
-새로 작성한 `src/tests/test_weakness.c`는 42개의 테스트로 구성된다.
+新撰寫的 `src/tests/test_weakness.c` 共包含 42 個測試。
 
-### 4.1 테스트 카테고리별 구성
+### 4.1 測試類別構成
 
-| 카테고리 | 테스트 수 | 대상 |
+| 類別 | 測試數 | 目標 |
 |---------|---------|------|
-| W1: rank `=N` 포맷 | 4 | `parse_rank("=201")` → 201/201 |
-| W2: rank `N+` 포맷 | 4 | `parse_rank("201+")` → 201/201 (기존 동작 문서화) |
-| W3: rank `#N` 포맷 | 1 | 현재 동작(-1/-1) 문서화 |
-| W4: 정수 오버플로 | 2 | 99999999999999 입력 시 비충돌 확인 |
-| W5: 음수 점수 모호성 | 3 | 점수 -2.5 → CSV 빈값 출력; 0.0 → 정상 출력 |
-| W6: 점수 뒤 노이즈 | 4 | "91.2 pts", "85/100", "73.5%" |
-| W7: 앰퍼샌드(&) | 3 | 이름에서 & 보존 확인 |
-| W8: 슬래시(/) | 2 | 슬래시 뒤 대문자화 수정 검증 |
-| W9: 주요 국가 fallback | 10 | Japan, Germany, France 등 7개국 + 멱등성 2건 |
-| W10: 역전된 순위 기록 | 1 | 크래시 없이 기록됨 확인 |
-| W11: 헤더만 있는 CSV | 1 | 0건 반환, 비충돌 |
-| W12: UTF-8 BOM 헤더 | 2 | BOM 제거 후 정상 파싱 |
-| Integration | 5 | =N, N+ 포맷 포함 전체 파이프라인 |
+| W1：rank `=N` 格式 | 4 | `parse_rank("=201")` → 201/201 |
+| W2：rank `N+` 格式 | 4 | `parse_rank("201+")` → 201/201（文件化既有行為） |
+| W3：rank `#N` 格式 | 1 | 文件化目前行為（-1/-1） |
+| W4：整數溢位 | 2 | 輸入 99999999999999 時確認不崩潰 |
+| W5：負分數歧義 | 3 | 分數 -2.5 → CSV 輸出空欄位；0.0 → 正常輸出 |
+| W6：分數後雜訊 | 4 | `"91.2 pts"`、`"85/100"`、`"73.5%"` |
+| W7：& 符號 | 3 | 確認名稱中保留 & |
+| W8：斜線（/） | 2 | 驗證斜線後大寫化修復 |
+| W9：主要國家 fallback | 10 | 日本、德國、法國等 7 個國家 + 冪等性 2 件 |
+| W10：反轉排名記錄 | 1 | 確認記錄時不崩潰 |
+| W11：僅含標頭的 CSV | 1 | 回傳 0 筆，不崩潰 |
+| W12：UTF-8 BOM 標頭 | 2 | 移除 BOM 後正常解析 |
+| Integration | 5 | 包含 =N、N+ 格式的完整管線 |
 
-### 4.2 핵심 테스트 케이스 예시
+### 4.2 核心測試案例範例
 
 ```
-W1: parse_rank("=201")   → rank_min=201, rank_max=201  [BUG-1 수정 검증]
-W1: parse_rank("  =99 ") → rank_min=99,  rank_max=99   [공백 처리 포함]
-W8: normalize_name("Arts/Sciences Department") → "Arts/Sciences Department" [BUG-2 수정 검증]
-W5: csv_writer(score=-2.5) → blank field in output CSV  [설계 한계 문서화]
-W12: UTF-8 BOM CSV load → 1 record, name="MIT"          [기존 기능 보강 확인]
+W1: parse_rank("=201")   → rank_min=201, rank_max=201  [Bug-1 修復驗證]
+W1: parse_rank("  =99 ") → rank_min=99,  rank_max=99   [含空白處理]
+W8: normalize_name("Arts/Sciences Department") → "Arts/Sciences Department" [Bug-2 修復驗證]
+W5: csv_writer(score=-2.5) → blank field in output CSV  [設計限制文件化]
+W12: UTF-8 BOM CSV load → 1 record, name="MIT"          [既有功能強化確認]
 ```
 
 ---
 
-## 5. 코드 수정 내역
+## 5. 程式碼修改記錄
 
-### 수정 파일 1: `c_engine/src/rank_parser.c`
+### 修改檔案 1：`c_engine/src/rank_parser.c`
 
-**변경 내용:**
-- 파일 헤더 주석에 `=N` 및 `N+` 지원 추가 기재
-- `parse_rank()` 함수에 `Case 4: =N` 삽입 (기존 "plain integer" 케이스 앞)
+**變更內容：**
+- 在檔案標頭註釋中新增 `=N` 及 `N+` 支援說明
+- 在 `parse_rank()` 函式中插入 `Case 4: =N`（位於既有「plain integer」case 之前）
 
 ```c
 /* Case 4: =N — explicit-equal notation */
@@ -124,12 +124,12 @@ if (sscanf(temp, " %d", &a) == 1) {
 }
 ```
 
-> `N+` 포맷은 `sscanf("%d")` 가 `+` 앞에서 멈추는 특성 덕분에 별도 케이스 없이 Case 5로 처리됨. 주석에 명시하여 의도를 문서화했다.
+> `N+` 格式得益於 `sscanf("%d")` 在 `+` 前停止的特性，無需額外 case，由 Case 5 處理。已在註釋中明確說明意圖。
 
-### 수정 파일 2: `c_engine/src/name_normalizer.c`
+### 修改檔案 2：`c_engine/src/name_normalizer.c`
 
-**변경 내용:**
-- `apply_readable_name_case()` 내 `capitalize_next` 트리거 조건에 `/` 추가
+**變更內容：**
+- 在 `apply_readable_name_case()` 中，將 `/` 加入 `capitalize_next` 的觸發條件
 
 ```c
 /* Before */
@@ -139,43 +139,43 @@ capitalize_next = (ch == '-' || ch == '(');
 capitalize_next = (ch == '-' || ch == '(' || ch == '/');
 ```
 
-### 추가 파일: `c_engine/src/tests/test_weakness.c`
+### 新增檔案：`c_engine/src/tests/test_weakness.c`
 
-- 42개 취약점 중심 회귀 테스트
-- `Makefile`에 `test_weakness` 및 `test_all` 타겟 추가
+- 42 個以弱點為中心的回歸測試
+- 在 `Makefile` 中新增 `test_weakness` 及 `test_all` 目標
 
 ---
 
-## 6. 최종 테스트 결과 (수정 후)
+## 6. 最終測試結果（修改後）
 
-| 테스트 스위트 | 결과 |
+| 測試套件 | 結果 |
 |-------------|------|
-| `test_normalizer` (기존 unit) | **17 / 17** ✅ |
-| `test_extreme` (기존 extreme) | **139 / 139** ✅ |
-| `test_scale` (기존 scale) | **31 / 31** ✅ |
-| `test_weakness` (신규 weakness) | **42 / 42** ✅ |
-| **전체 합계** | **229 / 229** ✅ |
+| `test_normalizer`（既有 unit） | **17 / 17** ✅ |
+| `test_extreme`（既有 extreme） | **139 / 139** ✅ |
+| `test_scale`（既有 scale） | **31 / 31** ✅ |
+| `test_weakness`（新增 weakness） | **42 / 42** ✅ |
+| **全部合計** | **229 / 229** ✅ |
 
-모든 기존 테스트가 회귀 없이 통과하고, 신규 테스트 42건도 전원 통과한다.
+所有既有測試無回歸全數通過，新增 42 件測試亦全數通過。
 
 ---
 
-## 7. 잔여 개선 권고 사항
+## 7. 剩餘改善建議
 
-| 우선순위 | 항목 | 설명 |
+| 優先順序 | 項目 | 說明 |
 |---------|------|------|
-| 높음 | `rank_parser`: `#N` 포맷 처리 | `#10` 형식의 순위 파싱 추가 |
-| 중간 | `rank_parser`: 정수 오버플로 방어 | `long` 로 먼저 파싱 후 범위 검사 |
-| 중간 | `csv_writer`: 역전된 순위 경고 | `rank_min > rank_max` 시 stderr 경고 |
-| 낮음 | `score_parser`: sentinel 값 변경 | `-1.0` 대신 `NaN` 또는 별도 플래그 사용 고려 |
-| 낮음 | CI 통합 | `test_all` 타겟을 GitHub Actions 등에 연결 |
+| 高 | `rank_parser`：處理 `#N` 格式 | 新增 `#10` 形式的排名解析 |
+| 中 | `rank_parser`：防止整數溢位 | 先以 `long` 解析後再進行範圍檢查 |
+| 中 | `csv_writer`：反轉排名警告 | 當 `rank_min > rank_max` 時輸出 stderr 警告 |
+| 低 | `score_parser`：更換 sentinel 值 | 考慮以 `NaN` 或獨立旗標取代 `-1.0` |
+| 低 | CI 整合 | 將 `test_all` 目標連接至 GitHub Actions 等 CI 工具 |
 
 ---
 
-## 8. 결론
+## 8. 結論
 
-이번 실험을 통해 2개의 실질적 버그(`=N` 포맷 누락, `/` 뒤 소문자화)를 발견하고 수정했다. 수정 전후 229개 테스트 전원이 통과하며, 신규 취약점 중심 테스트 파일(`test_weakness.c`)이 향후 회귀 방지 역할을 수행한다.
+本次實驗發現並修復了 2 個實質性錯誤（`=N` 格式缺失、`/` 後小寫化問題）。修復前後 229 個測試全數通過，新增的弱點中心測試檔案（`test_weakness.c`）將在未來承擔回歸防護的角色。
 
 ---
 
-*자동 생성: 2026-04-13*
+*自動生成：2026-04-13*
