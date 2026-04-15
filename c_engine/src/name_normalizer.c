@@ -231,6 +231,31 @@ static int is_lowercase_connector(const char *word, size_t len, int is_first_wor
         return 1;
     }
 
+    /* 常見前置詞與介系詞——不在句首時保持小寫 */
+    if (len == 2 && equals_ignore_case(word, "in")) {
+        return 1;
+    }
+
+    if (len == 2 && equals_ignore_case(word, "at")) {
+        return 1;
+    }
+
+    if (len == 2 && equals_ignore_case(word, "to")) {
+        return 1;
+    }
+
+    if (len == 2 && equals_ignore_case(word, "by")) {
+        return 1;
+    }
+
+    if (len == 1 && equals_ignore_case(word, "a")) {
+        return 1;
+    }
+
+    if (len == 2 && equals_ignore_case(word, "an")) {
+        return 1;
+    }
+
     return 0;
 }
 

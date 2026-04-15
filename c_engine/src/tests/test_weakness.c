@@ -8,7 +8,7 @@
  * Weaknesses targeted:
  *   W1.  rank_parser  — =N  format silently returns -1/-1 (未定義行為)
  *   W2.  rank_parser  — N+  format silently returns -1/-1 (未定義行為)
- *   W3.  rank_parser  — #N  hash prefix format (e.g., "#10")
+ *   W3.  rank_parser  — #N  hash prefix format (e.g., "#10") — fixed in Session 2
  *   W4.  rank_parser  — integer overflow for extremely large rank values
  *   W5.  score_parser — negative score ambiguity: -1.0 sentinel vs real value
  *   W6.  score_parser — score with trailing garbage (e.g., "91.2 pts")
@@ -139,18 +139,16 @@ static void test_w3_rank_hash_prefix(void)
     printf("\n--- W3: rank #N format ---\n");
 
     /*
-     * "#10" is currently undefined. This test documents the current
-     * behaviour (-1/-1) so any future change is caught immediately.
+     * Fix C (Session 2): #N hash-prefix format is now supported.
+     * "#10" should parse to rank_min=10, rank_max=10.
      */
     parse_rank("#10", &mn, &mx);
-    printf("       INFO: parse_rank(\"#10\") -> %d/%d"
-           "  (undefined; currently -1/-1 expected)\n", mn, mx);
-    chk("W3: \"#10\" current behaviour is -1/-1 (documented, not fixed)",
-        mn == -1 && mx == -1, NULL, NULL);
+    chk("W3: \"#10\" parses to 10/10 (fixed in Session 2)",
+        mn == 10 && mx == 10, NULL, NULL);
 
-    /*
-     * Once a fix is added, replace the expectation with mn==10 && mx==10.
-     */
+    parse_rank("#1", &mn, &mx);
+    chk("W3: \"#1\" parses to 1/1",
+        mn == 1 && mx == 1, NULL, NULL);
 }
 
 /* ------------------------------------------------------------------ */

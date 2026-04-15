@@ -17,7 +17,9 @@
  * - "Top 100"     -> rank_min = 1,   rank_max = 100
  * - "=201"        -> rank_min = 201, rank_max = 201  (equal-sign prefix)
  * - "201+"        -> rank_min = 201, rank_max = 201  (open-ended floor)
+ * - "#10"         -> rank_min = 10,  rank_max = 10   (hash prefix)
  *
+ * 負數排名視為解析失敗，回傳 -1/-1。
  * If parsing fails, both values are set to -1.
  */
 
@@ -83,6 +85,10 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
 
     /* Case 1: range such as 101-150 */
     if (sscanf(temp, " %d - %d", &a, &b) == 2) {
+        /* 修正 D：排名不可為負數 */
+        if (a < 0 || b < 0) {
+            return;
+        }
         *rank_min = a;
         *rank_max = b;
         return;
@@ -91,6 +97,9 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
     /* Case 2: Top 100 */
     if (sscanf(temp, " Top %d", &a) == 1 ||
         sscanf(temp, " top %d", &a) == 1) {
+        if (a < 0) {
+            return;
+        }
         *rank_min = 1;
         *rank_max = a;
         return;
@@ -99,6 +108,9 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
     /* Case 3: Rank 53 */
     if (sscanf(temp, " Rank %d", &a) == 1 ||
         sscanf(temp, " rank %d", &a) == 1) {
+        if (a < 0) {
+            return;
+        }
         *rank_min = a;
         *rank_max = a;
         return;
@@ -106,13 +118,30 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
 
     /* Case 4: =N — explicit-equal notation (e.g., "=201" from some ranking sources) */
     if (sscanf(temp, " =%d", &a) == 1) {
+        if (a < 0) {
+            return;
+        }
         *rank_min = a;
         *rank_max = a;
         return;
     }
 
-    /* Case 5: plain integer (also handles N+ because sscanf stops before '+') */
+    /* Case 5: #N — hash prefix notation (e.g., "#10") 修正 C */
+    if (sscanf(temp, " #%d", &a) == 1) {
+        if (a < 0) {
+            return;
+        }
+        *rank_min = a;
+        *rank_max = a;
+        return;
+    }
+
+    /* Case 6: plain integer (also handles N+ because sscanf stops before '+') */
     if (sscanf(temp, " %d", &a) == 1) {
+        /* 修正 D：負數排名視為無效 */
+        if (a < 0) {
+            return;
+        }
         *rank_min = a;
         *rank_max = a;
         return;
