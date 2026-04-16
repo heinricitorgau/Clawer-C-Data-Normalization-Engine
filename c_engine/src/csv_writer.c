@@ -105,12 +105,32 @@ int write_normalized_csv(const char *filename, const UniversityRecord records[],
     }
 
     for (i = 0; i < count; i++) {
+        /*
+         * Fix H (Session 3): when rank parsing failed (rank_min == -1),
+         * write empty rank fields instead of "-1,-1" so the output CSV
+         * contains only valid normalized data.  A warning is printed to
+         * stderr so the caller knows a record was not fully resolved.
+         */
         if (!write_csv_field(fp, records[i].normalized_name) ||
             fputc(',', fp) == EOF ||
-            !write_csv_field(fp, records[i].normalized_country) ||
-            fprintf(fp, ",%d,%d,", records[i].rank_min, records[i].rank_max) < 0) {
+            !write_csv_field(fp, records[i].normalized_country)) {
             fclose(fp);
             return 0;
+        }
+
+        if (records[i].rank_min < 0) {
+            fprintf(stderr,
+                    "csv_writer: record %d has unresolved rank; writing empty rank fields.\n",
+                    i);
+            if (fprintf(fp, ",,,") < 0) {
+                fclose(fp);
+                return 0;
+            }
+        } else {
+            if (fprintf(fp, ",%d,%d,", records[i].rank_min, records[i].rank_max) < 0) {
+                fclose(fp);
+                return 0;
+            }
         }
 
         if (records[i].score < 0) {

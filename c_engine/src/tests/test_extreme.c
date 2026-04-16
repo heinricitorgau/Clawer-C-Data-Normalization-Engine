@@ -231,9 +231,9 @@ static void test_adversarial(void)
 
     /* Internal newline and tab — should collapse to spaces */
     normalize_name("Univ\nof\tTech", out, NAME_LEN);
-    check("adversarial: \\n and \\t collapsed and normalised",
-          strcmp(out, "University of Technology") == 0,
-          out, "University of Technology");
+    check("adversarial: \\n and \\t collapsed and normalised (Fix G: Tech 不展開)",
+          strcmp(out, "University of Tech") == 0,
+          out, "University of Tech");
 
     /* CRLF suffix — must be trimmed */
     normalize_name("MIT\r\n", out, NAME_LEN);
@@ -360,21 +360,21 @@ static void test_abbreviations(void)
           strcmp(out, "Institute") == 0, out, "Institute");
 
     normalize_name("tech", out, NAME_LEN);
-    check("abbrev: \"tech\" -> \"Technology\"",
-          strcmp(out, "Technology") == 0, out, "Technology");
+    check("abbrev: \"tech\" -> \"Tech\" (不展開，Fix G)",
+          strcmp(out, "Tech") == 0, out, "Tech");
 
     normalize_name("TECH", out, NAME_LEN);
-    check("abbrev: \"TECH\" -> \"Technology\"",
-          strcmp(out, "Technology") == 0, out, "Technology");
+    check("abbrev: \"TECH\" -> \"Tech\" (不展開，Fix G)",
+          strcmp(out, "Tech") == 0, out, "Tech");
 
     normalize_name("univ.", out, NAME_LEN);
     check("abbrev: \"univ.\" -> \"University\"",
           strcmp(out, "University") == 0, out, "University");
 
     normalize_name("univ inst tech", out, NAME_LEN);
-    check("abbrev: multiple in one name",
-          strcmp(out, "University Institute Technology") == 0,
-          out, "University Institute Technology");
+    check("abbrev: multiple in one name (Fix G: tech 不展開)",
+          strcmp(out, "University Institute Tech") == 0,
+          out, "University Institute Tech");
 
     normalize_name("MIT univ", out, NAME_LEN);
     check("abbrev: MIT univ -> \"MIT University\"",

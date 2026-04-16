@@ -38,7 +38,11 @@ TEST_REGRESSION2_TARGET = $(BUILD_DIR)/test_regression2
 TEST_REGRESSION2_SRC    = src/tests/test_regression2.c
 TEST_REGRESSION2_OBJS   = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_regression2.o
 
-.PHONY: all run test test_extreme test_scale test_weakness test_regression2 test_all clean rebuild
+TEST_REGRESSION3_TARGET = $(BUILD_DIR)/test_regression3
+TEST_REGRESSION3_SRC    = src/tests/test_regression3.c
+TEST_REGRESSION3_OBJS   = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_regression3.o
+
+.PHONY: all run test test_extreme test_scale test_weakness test_regression2 test_regression3 test_all clean rebuild
 
 all: $(TARGET)
 
@@ -86,6 +90,14 @@ $(BUILD_DIR)/test_regression2.o: $(TEST_REGRESSION2_SRC)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $(TEST_REGRESSION2_SRC) -o $(BUILD_DIR)/test_regression2.o
 
+$(TEST_REGRESSION3_TARGET): $(TEST_REGRESSION3_OBJS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(TEST_REGRESSION3_OBJS) -o $(TEST_REGRESSION3_TARGET)
+
+$(BUILD_DIR)/test_regression3.o: $(TEST_REGRESSION3_SRC)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $(TEST_REGRESSION3_SRC) -o $(BUILD_DIR)/test_regression3.o
+
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -108,7 +120,10 @@ test_weakness: $(TEST_WEAKNESS_TARGET)
 test_regression2: $(TEST_REGRESSION2_TARGET)
 	./$(TEST_REGRESSION2_TARGET)
 
-test_all: test test_extreme test_scale test_weakness test_regression2
+test_regression3: $(TEST_REGRESSION3_TARGET)
+	./$(TEST_REGRESSION3_TARGET)
+
+test_all: test test_extreme test_scale test_weakness test_regression2 test_regression3
 
 clean:
 	rm -rf $(BUILD_DIR)
