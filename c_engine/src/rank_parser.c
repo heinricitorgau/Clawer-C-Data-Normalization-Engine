@@ -1,7 +1,10 @@
 
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /*
@@ -21,7 +24,19 @@
  *
  * 負數排名視為解析失敗，回傳 -1/-1。
  * If parsing fails, both values are set to -1.
+ *
+ * Fix I (Session 4): "Top"/"Rank" prefix matching is now case-insensitive.
+ * Fix L (Session 4): integer overflow protection via strtol with range check.
  */
+
+/*
+ * MAX_REASONABLE_RANK
+ *
+ * Any parsed rank value larger than this is treated as a parsing failure.
+ * Set to 9,999,999 to allow broad institutional datasets while still
+ * catching overflow-derived garbage like strtol wrapping to a positive int.
+ */
+#define MAX_REASONABLE_RANK 9999999
 
 /*
  * normalize_dash_characters
@@ -62,13 +77,64 @@ static void normalize_dash_characters(const char *input, char *output, int size)
 }
 
 /*
+ * safe_parse_int
+ *
+ * Parses an int from the string pointed to by *p, advancing *p past the
+ * consumed characters.  Returns 1 on success (value written to *out), or 0
+ * if the string is not a valid non-negative integer within MAX_REASONABLE_RANK.
+ *
+ * Fix L (Session 4): uses strtol so that very large values that would overflow
+ * int are rejected rather than silently wrapping around.
+ */
+static int safe_parse_int(const char *s, int *out) {
+    char *endptr;
+    long val;
+
+    if (s == NULL || out == NULL) {
+        return 0;
+    }
+
+    errno = 0;
+    val = strtol(s, &endptr, 10);
+
+    if (endptr == s) {
+        return 0;  /* no digits consumed */
+    }
+
+    if (errno == ERANGE || val < 0 || val > MAX_REASONABLE_RANK) {
+        return 0;  /* out-of-range */
+    }
+
+    *out = (int)val;
+    return 1;
+}
+
+/*
+ * str_prefix_icase
+ *
+ * Fix I (Session 4): case-insensitive prefix match.
+ * Returns a pointer to the character in `str` immediately after the prefix
+ * `prefix`, or NULL if the prefix does not match (case-insensitively).
+ */
+static const char *str_prefix_icase(const char *str, const char *prefix) {
+    while (*prefix != '\0') {
+        if (tolower((unsigned char)*str) != tolower((unsigned char)*prefix)) {
+            return NULL;
+        }
+        str++;
+        prefix++;
+    }
+    return str;  /* points past the matched prefix */
+}
+
+/*
  * parse_rank
  *
  * Parses a raw rank string into rank_min and rank_max.
  */
 void parse_rank(const char *input, int *rank_min, int *rank_max) {
     char temp[128];
-    int a, b;
+    int a;
 
     if (rank_min == NULL || rank_max == NULL) {
         return;
@@ -83,67 +149,72 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
 
     normalize_dash_characters(input, temp, (int)sizeof(temp));
 
-    /* Case 1: range such as 101-150 */
-    if (sscanf(temp, " %d - %d", &a, &b) == 2) {
-        /* 修正 D：排名不可為負數 */
-        if (a < 0 || b < 0) {
-            return;
-        }
-        *rank_min = a;
-        *rank_max = b;
-        return;
-    }
+    {
+        /* Skip leading whitespace for all cases */
+        const char *p = temp;
+        const char *after;
+        int na, nb;
 
-    /* Case 2: Top 100 */
-    if (sscanf(temp, " Top %d", &a) == 1 ||
-        sscanf(temp, " top %d", &a) == 1) {
-        if (a < 0) {
-            return;
+        while (*p != '\0' && (*p == ' ' || *p == '\t')) {
+            p++;
         }
-        *rank_min = 1;
-        *rank_max = a;
-        return;
-    }
 
-    /* Case 3: Rank 53 */
-    if (sscanf(temp, " Rank %d", &a) == 1 ||
-        sscanf(temp, " rank %d", &a) == 1) {
-        if (a < 0) {
-            return;
+        /* Case 2 (Fix I): Top N — case-insensitive */
+        after = str_prefix_icase(p, "top");
+        if (after != NULL) {
+            /* skip optional whitespace between "top" and the number */
+            while (*after == ' ' || *after == '\t') { after++; }
+            if (safe_parse_int(after, &a)) {
+                *rank_min = 1;
+                *rank_max = a;
+                return;
+            }
         }
-        *rank_min = a;
-        *rank_max = a;
-        return;
-    }
 
-    /* Case 4: =N — explicit-equal notation (e.g., "=201" from some ranking sources) */
-    if (sscanf(temp, " =%d", &a) == 1) {
-        if (a < 0) {
-            return;
+        /* Case 3 (Fix I): Rank N — case-insensitive */
+        after = str_prefix_icase(p, "rank");
+        if (after != NULL) {
+            while (*after == ' ' || *after == '\t') { after++; }
+            if (safe_parse_int(after, &a)) {
+                *rank_min = a;
+                *rank_max = a;
+                return;
+            }
         }
-        *rank_min = a;
-        *rank_max = a;
-        return;
-    }
 
-    /* Case 5: #N — hash prefix notation (e.g., "#10") 修正 C */
-    if (sscanf(temp, " #%d", &a) == 1) {
-        if (a < 0) {
-            return;
+        /* Case 4: =N — explicit-equal notation */
+        if (*p == '=') {
+            if (safe_parse_int(p + 1, &a)) {
+                *rank_min = a;
+                *rank_max = a;
+                return;
+            }
         }
-        *rank_min = a;
-        *rank_max = a;
-        return;
-    }
 
-    /* Case 6: plain integer (also handles N+ because sscanf stops before '+') */
-    if (sscanf(temp, " %d", &a) == 1) {
-        /* 修正 D：負數排名視為無效 */
-        if (a < 0) {
+        /* Case 5: #N — hash prefix notation (Fix C, Session 2) */
+        if (*p == '#') {
+            if (safe_parse_int(p + 1, &a)) {
+                *rank_min = a;
+                *rank_max = a;
+                return;
+            }
+        }
+
+        /* Case 1: range A-B (try before plain int to avoid A being consumed alone) */
+        if (sscanf(p, "%d - %d", &na, &nb) == 2) {
+            if (na < 0 || nb < 0 || na > MAX_REASONABLE_RANK || nb > MAX_REASONABLE_RANK) {
+                return;
+            }
+            *rank_min = na;
+            *rank_max = nb;
             return;
         }
-        *rank_min = a;
-        *rank_max = a;
-        return;
+
+        /* Case 6 (Fix L): plain integer via safe_parse_int */
+        if (safe_parse_int(p, &a)) {
+            *rank_min = a;
+            *rank_max = a;
+            return;
+        }
     }
 }

@@ -63,7 +63,18 @@ void to_lowercase(char *str) {
  * Checks if a word matches known uppercase acronyms.
  */
 static int is_acronym(const char *word, size_t len) {
-    const char *acronyms[] = {"MIT", "UCL", "NUS", "NTU", "USA", "UK", "SG", "ROC", "NYU", "UCLA", "UCB", "UCSD", "ANU", "UNSW", "CUHK", "EPFL", "KAIST", "POSTECH", "LSE", "KTH", "UM", "UBA", "UNAM", "UC", "NTU", "UM", "LSE", NULL};
+    /* Fix K (Session 4): expanded acronym list; synced with name_normalizer.c */
+    const char *acronyms[] = {
+        "MIT", "UCL", "NUS", "NTU", "USA", "UK", "SG", "ROC", "NYU",
+        "UCLA", "UCB", "UCSD", "ANU", "UNSW", "CUHK", "EPFL",
+        "KAIST", "POSTECH", "LSE", "KTH", "UM", "UBA", "UNAM", "UC",
+        /* Fix K additions */
+        "ETH", "UBC", "HKUST", "TUM", "TU", "CEU", "UMD", "UVA",
+        "UNC", "UCD", "UWA", "UTS", "RMIT", "UST", "IIT", "IIM",
+        "IISC", "UQ", "UGA", "UIC", "UFL", "USF", "UAB",
+        "UTK", "UTA", "UTD",
+        NULL
+    };
     char temp[32];
     int i;
     
@@ -87,17 +98,50 @@ static int is_acronym(const char *word, size_t len) {
  *
  * Applies Title Case, lowercase (for 'of'), or uppercase (for acronyms).
  */
+/*
+ * is_title_connector
+ *
+ * Returns 1 for short connector words that stay lowercase in title case,
+ * unless they appear at the start of the string (Fix F, Session 3).
+ * Mirrors the richer list in name_normalizer.c's is_lowercase_connector().
+ */
+static int is_title_connector(const char *word, size_t len) {
+    char lower[8];
+    size_t i;
+
+    if (len == 0 || len >= sizeof(lower)) {
+        return 0;
+    }
+
+    for (i = 0; i < len; i++) {
+        lower[i] = (char)tolower((unsigned char)word[i]);
+    }
+    lower[len] = '\0';
+
+    return (strcmp(lower, "of")  == 0 ||
+            strcmp(lower, "and") == 0 ||
+            strcmp(lower, "the") == 0 ||
+            strcmp(lower, "for") == 0 ||
+            strcmp(lower, "in")  == 0 ||
+            strcmp(lower, "at")  == 0 ||
+            strcmp(lower, "to")  == 0 ||
+            strcmp(lower, "by")  == 0 ||
+            strcmp(lower, "a")   == 0 ||
+            strcmp(lower, "an")  == 0);
+}
+
 static void process_word_case(char *start, size_t len, int is_first_word) {
     if (len == 0) return;
-    
-    if (len == 2 && tolower((unsigned char)start[0]) == 'o' && tolower((unsigned char)start[1]) == 'f') {
-        if (!is_first_word) {
-            start[0] = 'o';
-            start[1] = 'f';
-            return;
+
+    /* Fix F (Session 3): keep common connectors lowercase unless first word */
+    if (!is_first_word && is_title_connector(start, len)) {
+        size_t i;
+        for (i = 0; i < len; i++) {
+            start[i] = (char)tolower((unsigned char)start[i]);
         }
+        return;
     }
-    
+
     if (is_acronym(start, len)) {
         for (size_t i = 0; i < len; i++) {
             start[i] = (char)toupper((unsigned char)start[i]);

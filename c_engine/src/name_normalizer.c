@@ -89,9 +89,13 @@ static const char *map_abbreviation(const char *word) {
         return "Institute";
     }
 
-    if (equals_ignore_case(word, "tech")) {
-        return "Technology";
-    }
+    /*
+     * Fix G (Session 3): "Tech" is NOT expanded to "Technology".
+     * Many universities use "Tech" as part of their official proper name
+     * (Georgia Tech, Texas Tech University, Virginia Tech, etc.).
+     * Expanding it silently corrupts those names.
+     * Deliberately removed: if (equals_ignore_case(word, "tech")) ...
+     */
 
     return word;
 }
@@ -163,6 +167,11 @@ static int is_name_acronym(const char *word, size_t len) {
         /* Extended list (synced with utils.c is_acronym) */
         "KAIST", "POSTECH", "LSE", "KTH", "ANU", "UNSW", "CUHK",
         "UBA", "UNAM",
+        /* Fix K (Session 4): additional well-known university acronyms */
+        "ETH", "UBC", "HKUST", "TUM", "TU", "CEU", "UMD", "UVA",
+        "UNC", "UCD", "UWA", "UTS", "RMIT", "UST", "IIT", "IIM",
+        "IISC", "UM", "UQ", "UGA", "UIC", "UFL", "USF", "UAB",
+        "UTK", "UTA", "UTD",
         NULL
     };
     /* Strip one layer of parentheses so "(UCB)" is treated as "UCB" */

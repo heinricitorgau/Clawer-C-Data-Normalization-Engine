@@ -25,12 +25,27 @@
  * Converts the input string into a simplified comparable form.
  */
 static void normalize_basic(const char *input, char *output, int size) {
+    size_t k;
+
     if (input == NULL || output == NULL || size <= 0) {
         return;
     }
 
     safe_copy_string(output, (size_t)size, input);
     trim_whitespace(output);
+
+    /*
+     * Fix E (Session 3): replace hyphens with spaces BEFORE remove_punctuation
+     * so that "Timor-Leste" → "Timor Leste" instead of "Timorleste".
+     * remove_punctuation deletes all ispunct except parentheses, which
+     * includes hyphens; substituting first preserves word boundaries.
+     */
+    for (k = 0; output[k] != '\0'; k++) {
+        if (output[k] == '-') {
+            output[k] = ' ';
+        }
+    }
+
     remove_punctuation(output);
     to_lowercase(output);
     collapse_spaces(output);
@@ -113,6 +128,47 @@ void normalize_country(const char *input, char *output, int size) {
         {"belgium", "Belgium"},
         {"nz", "New Zealand"},
         {"new zealand", "New Zealand"},
+        /* Fix E (Session 3): hyphenated country names — stored without hyphens
+         * because normalize_basic now converts hyphens to spaces before lookup */
+        {"timor leste", "Timor-Leste"},
+        {"east timor", "Timor-Leste"},
+        {"guinea bissau", "Guinea-Bissau"},
+        {"trinidad and tobago", "Trinidad and Tobago"},
+        {"antigua and barbuda", "Antigua and Barbuda"},
+        {"bosnia and herzegovina", "Bosnia and Herzegovina"},
+        {"sao tome and principe", "São Tomé and Príncipe"},
+        {"cabo verde", "Cabo Verde"},
+        {"sierra leone", "Sierra Leone"},
+        {"saudi arabia", "Saudi Arabia"},
+        {"united states minor outlying islands", "United States"},
+        /* Fix J (Session 4): additional aliases commonly seen in ranking data */
+        /* Korea short-form variants after punctuation removal */
+        {"korea rep", "South Korea"},
+        {"korea republic", "South Korea"},
+        {"dem peoples rep of korea", "North Korea"},
+        {"korea dem peoples rep", "North Korea"},
+        {"korea democratic peoples republic", "North Korea"},
+        /* Russia / Soviet-era names */
+        {"russia", "Russia"},
+        {"russian federation", "Russia"},
+        {"ussr", "Russia"},
+        /* Macao/Macau — two common spellings, canonical: "Macao SAR" */
+        {"macao", "Macao SAR"},
+        {"macau", "Macao SAR"},
+        {"macao sar", "Macao SAR"},
+        {"macau sar", "Macao SAR"},
+        /* Czech Republic / Czechia */
+        {"czech republic", "Czech Republic"},
+        {"czechia", "Czech Republic"},
+        /* Iran */
+        {"iran", "Iran"},
+        {"islamic republic of iran", "Iran"},
+        /* Turkey/Türkiye */
+        {"turkey", "Turkey"},
+        {"turkiye", "Turkey"},
+        /* Vietnam */
+        {"vietnam", "Vietnam"},
+        {"viet nam", "Vietnam"},
         {NULL, NULL}
     };
 
