@@ -6,22 +6,22 @@
 
 ```mermaid
 flowchart LR
-    U[使用者 / 測試指令] --> CLI[CLI 主程式\nsrc/main.c]
-    CSV[data/samples/*.csv] --> CLI
-    CLI --> Reader[CSV Reader\nsrc/csv_reader.c]
-    Reader --> Record[UniversityRecord[]\ninclude/record.h]
-    Record --> Pipeline[Normalization Pipeline\nsrc/normalizer.c]
-    Pipeline --> Name[Name Normalizer\nsrc/name_normalizer.c]
-    Pipeline --> Country[Country Normalizer\nsrc/country_normalizer.c]
-    Pipeline --> Rank[Rank Parser\nsrc/rank_parser.c]
-    Pipeline --> Score[Score Parser\nsrc/score_parser.c]
+    U["使用者 / 測試指令"] --> CLI["CLI 主程式<br/>src/main.c"]
+    CSV["data/samples/*.csv"] --> CLI
+    CLI --> Reader["CSV Reader<br/>src/csv_reader.c"]
+    Reader --> Record["UniversityRecord array<br/>include/record.h"]
+    Record --> Pipeline["Normalization Pipeline<br/>src/normalizer.c"]
+    Pipeline --> Name["Name Normalizer<br/>src/name_normalizer.c"]
+    Pipeline --> Country["Country Normalizer<br/>src/country_normalizer.c"]
+    Pipeline --> Rank["Rank Parser<br/>src/rank_parser.c"]
+    Pipeline --> Score["Score Parser<br/>src/score_parser.c"]
     Name --> Record
     Country --> Record
     Rank --> Record
     Score --> Record
-    Record --> Writer[CSV Writer\nsrc/csv_writer.c]
-    Writer --> Out[data/samples/normalized_universities.csv]
-    Utils[共用工具\nsrc/utils.c] --> Reader
+    Record --> Writer["CSV Writer<br/>src/csv_writer.c"]
+    Writer --> Out["data/samples/normalized_universities.csv"]
+    Utils["共用工具<br/>src/utils.c"] --> Reader
     Utils --> Name
     Utils --> Country
 ```
@@ -30,25 +30,25 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Make[Makefile] --> BuildMain[build/clawer_normalizer]
-    Make --> BuildTests[build/test_*]
+    Make["Makefile"] --> BuildMain["build/clawer_normalizer"]
+    Make --> BuildTests["build/test_*"]
 
-    BuildMain --> Main[src/main.c]
+    BuildMain --> Main["src/main.c"]
     Main --> Reader
     Main --> Normalizer
     Main --> Writer
 
-    subgraph Core[核心模組]
-        Reader[CSV Reader]
-        Normalizer[normalizer.c]
-        Writer[CSV Writer]
-        Name[Name Normalizer]
-        Country[Country Normalizer]
-        Rank[Rank Parser]
-        Score[Score Parser]
-        Requirement[Requirement Parser]
-        Utils[utils.c]
-        Record[record.h]
+    subgraph Core["核心模組"]
+        Reader["CSV Reader"]
+        Normalizer["normalizer.c"]
+        Writer["CSV Writer"]
+        Name["Name Normalizer"]
+        Country["Country Normalizer"]
+        Rank["Rank Parser"]
+        Score["Score Parser"]
+        Requirement["Requirement Parser"]
+        Utils["utils.c"]
+        Record["record.h"]
     end
 
     Normalizer --> Name
@@ -62,13 +62,13 @@ flowchart TD
     Country --> Utils
     Reader --> Utils
 
-    BuildTests --> TestBase[src/tests/test_normalizer.c]
-    BuildTests --> TestExtreme[src/tests/test_extreme.c]
-    BuildTests --> TestScale[src/tests/test_scale.c]
-    BuildTests --> TestWeakness[src/tests/test_weakness.c]
-    BuildTests --> TestR2[src/tests/test_regression2.c]
-    BuildTests --> TestR3[src/tests/test_regression3.c]
-    BuildTests --> TestR4[src/tests/test_regression4.c]
+    BuildTests --> TestBase["src/tests/test_normalizer.c"]
+    BuildTests --> TestExtreme["src/tests/test_extreme.c"]
+    BuildTests --> TestScale["src/tests/test_scale.c"]
+    BuildTests --> TestWeakness["src/tests/test_weakness.c"]
+    BuildTests --> TestR2["src/tests/test_regression2.c"]
+    BuildTests --> TestR3["src/tests/test_regression3.c"]
+    BuildTests --> TestR4["src/tests/test_regression4.c"]
     TestBase --> Core
     TestExtreme --> Core
     TestScale --> Core
@@ -85,7 +85,7 @@ sequenceDiagram
     participant User as 使用者
     participant Main as main.c
     participant Reader as csv_reader.c
-    participant Record as UniversityRecord[]
+    participant Record as UniversityRecord array
     participant Norm as normalizer.c
     participant Writer as csv_writer.c
 
@@ -126,19 +126,19 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph Repo[crawlernest-normalization]
-        subgraph Engine[c_engine]
-            CLI[Interactive CLI]
-            Core[Normalization Core]
-            Tests[Test Suites]
-            Samples[Sample CSV Data]
-            Docs[Architecture / README]
+    subgraph Repo["crawlernest-normalization"]
+        subgraph Engine["c_engine"]
+            CLI["Interactive CLI"]
+            Core["Normalization Core"]
+            Tests["Test Suites"]
+            Samples["Sample CSV Data"]
+            Docs["Architecture / README"]
         end
-        Reports[test-report.md / test-record.md]
-        Scripts[apply_session4_patches.py]
+        Reports["test-report.md / test-record.md"]
+        Scripts["apply_session4_patches.py"]
     end
 
-    User[使用者或 CI] --> CLI
+    User["使用者或 CI"] --> CLI
     User --> Tests
     Samples --> CLI
     CLI --> Core
