@@ -27,6 +27,8 @@
  *
  * Fix I (Session 4): "Top"/"Rank" prefix matching is now case-insensitive.
  * Fix L (Session 4): integer overflow protection via strtol with range check.
+ * Fix P (Session 5): "TOP 0" is now rejected (N must be >= 1).
+ * Fix Q (Session 5): reversed range "B-A" (B > A) is auto-corrected to A-B.
  */
 
 /*
@@ -164,7 +166,11 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
         if (after != NULL) {
             /* skip optional whitespace between "top" and the number */
             while (*after == ' ' || *after == '\t') { after++; }
-            if (safe_parse_int(after, &a)) {
+            /*
+             * Fix P (Session 5): reject "TOP 0" — a range of [1, 0] is
+             * logically inconsistent (min > max).  Require N >= 1.
+             */
+            if (safe_parse_int(after, &a) && a >= 1) {
                 *rank_min = 1;
                 *rank_max = a;
                 return;
@@ -204,6 +210,16 @@ void parse_rank(const char *input, int *rank_min, int *rank_max) {
         if (sscanf(p, "%d - %d", &na, &nb) == 2) {
             if (na < 0 || nb < 0 || na > MAX_REASONABLE_RANK || nb > MAX_REASONABLE_RANK) {
                 return;
+            }
+            /*
+             * Fix Q (Session 5): range reversal guard.
+             * Inputs like "150-101" produce na=150, nb=101 (min > max).
+             * Swap them so rank_min is always <= rank_max.
+             */
+            if (na > nb) {
+                int tmp = na;
+                na = nb;
+                nb = tmp;
             }
             *rank_min = na;
             *rank_max = nb;

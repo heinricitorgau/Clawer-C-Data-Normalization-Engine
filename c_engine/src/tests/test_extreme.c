@@ -462,11 +462,11 @@ static void test_rank_edge_cases(void)
 
     parse_rank("150-101", &mn, &mx);
     check("rank: inverted range 150-101 parsed without crash",
-          mn == 150 && mx == 101, NULL, NULL);
+          mn == 101 && mx == 150, NULL, NULL);  /* Fix Q: auto-swapped */
 
     parse_rank("Top 0", &mn, &mx);
-    check("rank: \"Top 0\" -> 1/0",
-          mn == 1 && mx == 0, NULL, NULL);
+    check("rank: \"Top 0\" -> -1/-1",
+          mn == -1 && mx == -1, NULL, NULL);  /* Fix P: rejected */
 
     parse_rank("1-2-3", &mn, &mx);
     check("rank: \"1-2-3\" -> 1/2",

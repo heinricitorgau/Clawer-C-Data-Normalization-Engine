@@ -331,11 +331,35 @@ static int map_row_to_record(
     safe_copy_string(record->raw_name, NAME_LEN, fields[header_map->idx_name]);
     safe_copy_string(record->raw_country, COUNTRY_LEN, fields[header_map->idx_country]);
 
-    snprintf(record->raw_rank,
-             RANK_STR_LEN,
-             "%s-%s",
-             fields[header_map->idx_rank_min],
-             fields[header_map->idx_rank_max]);
+    /*
+     * Fix M (Session 5): smart rank field combination.
+     *
+     * Previous code always used "%s-%s" which produced "-150" when
+     * rank_min was empty, causing the rank parser to fail on a clearly
+     * valid rank_max-only value.
+     *
+     * New logic:
+     * - both empty       → raw_rank = ""         → parse_rank returns -1/-1
+     * - only rank_max    → raw_rank = rank_max    → parsed as single rank
+     * - only rank_min    → raw_rank = rank_min    → parsed as single rank
+     * - both present     → raw_rank = "min-max"   → parsed as range (unchanged)
+     */
+    {
+        const char *rmin = fields[header_map->idx_rank_min];
+        const char *rmax = fields[header_map->idx_rank_max];
+        int rmin_empty = (rmin[0] == '\0');
+        int rmax_empty = (rmax[0] == '\0');
+
+        if (rmin_empty && rmax_empty) {
+            record->raw_rank[0] = '\0';
+        } else if (rmin_empty) {
+            snprintf(record->raw_rank, RANK_STR_LEN, "%s", rmax);
+        } else if (rmax_empty) {
+            snprintf(record->raw_rank, RANK_STR_LEN, "%s", rmin);
+        } else {
+            snprintf(record->raw_rank, RANK_STR_LEN, "%s-%s", rmin, rmax);
+        }
+    }
 
     safe_copy_string(record->raw_score, SCORE_STR_LEN, fields[header_map->idx_score]);
 
