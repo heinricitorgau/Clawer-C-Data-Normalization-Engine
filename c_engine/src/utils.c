@@ -73,6 +73,8 @@ static int is_acronym(const char *word, size_t len) {
         "UNC", "UCD", "UWA", "UTS", "RMIT", "UST", "IIT", "IIM",
         "IISC", "UQ", "UGA", "UIC", "UFL", "USF", "UAB",
         "UTK", "UTA", "UTD",
+        /* Fix T (Session 6): additional well-known university acronyms */
+        "KAUST", "HKU",
         NULL
     };
     char temp[32];

@@ -12,8 +12,13 @@
  * - " 98.40 "      -> 98.4
  * - "Score: 98.4"  -> 98.4
  * - "score 91.25"  -> 91.25
+ * - ".5"           -> 0.5   (Fix S, Session 6: leading decimal point)
  *
  * If parsing fails, returns -1.0.
+ *
+ * Fix S (Session 6): extract_first_number now recognises a leading '.'
+ * as the start of a decimal number (e.g. ".5" -> 0.5).  The special-case
+ * guard for lone '+'/'-' was extended to also reject a lone '.'.
  */
 
 /*
@@ -41,6 +46,15 @@ static int extract_first_number(const char *input, char *number_buf, int size) {
             if (isdigit(ch) || ch == '-' || ch == '+') {
                 started = 1;
                 number_buf[j++] = (char)ch;
+            } else if (ch == '.') {
+                /*
+                 * Fix S (Session 6): treat a leading '.' as the start of a
+                 * decimal number so that ".5" parses as 0.5 instead of 5.0.
+                 * dot_seen is set to prevent a second '.' being accepted.
+                 */
+                started = 1;
+                dot_seen = 1;
+                number_buf[j++] = (char)ch;
             }
         } else {
             if (isdigit(ch)) {
@@ -66,7 +80,9 @@ static int extract_first_number(const char *input, char *number_buf, int size) {
         return 0;
     }
 
-    if ((j == 1) && (number_buf[0] == '-' || number_buf[0] == '+')) {
+    /* Reject lone sign or lone decimal point (no digits consumed) */
+    if ((j == 1) && (number_buf[0] == '-' || number_buf[0] == '+'
+                     || number_buf[0] == '.')) {
         return 0;
     }
 

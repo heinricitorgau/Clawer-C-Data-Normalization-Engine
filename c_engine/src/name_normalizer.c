@@ -172,6 +172,8 @@ static int is_name_acronym(const char *word, size_t len) {
         "UNC", "UCD", "UWA", "UTS", "RMIT", "UST", "IIT", "IIM",
         "IISC", "UM", "UQ", "UGA", "UIC", "UFL", "USF", "UAB",
         "UTK", "UTA", "UTD",
+        /* Fix T (Session 6): additional well-known university acronyms */
+        "KAUST", "HKU",
         NULL
     };
     /* Strip one layer of parentheses so "(UCB)" is treated as "UCB" */

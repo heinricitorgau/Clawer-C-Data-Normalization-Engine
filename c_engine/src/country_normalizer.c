@@ -141,6 +141,53 @@ void normalize_country(const char *input, char *output, int size) {
         {"sierra leone", "Sierra Leone"},
         {"saudi arabia", "Saudi Arabia"},
         {"united states minor outlying islands", "United States"},
+        /*
+         * Fix R (Session 6): "The X" prefix variants and PR China aliases.
+         *
+         * Many official and colloquial forms prepend "The" or use abbreviated
+         * forms ("PR China") that normalize_basic cannot collapse into an
+         * existing entry.  These are all stored in their post-normalize_basic
+         * form (lowercase, no punctuation, spaces collapsed).
+         */
+        /* "The X" prefix variants */
+        {"the netherlands", "Netherlands"},
+        {"the united states", "United States"},
+        {"the united states of america", "United States"},
+        {"the united kingdom", "United Kingdom"},
+        {"the peoples republic of china", "China (Mainland)"},
+        /* PR China — P.R. China / P.R.C. collapses to "pr china" after
+         * remove_punctuation; "prc" already handled above */
+        {"pr china", "China (Mainland)"},
+        /* Long-form official names commonly seen in UN / World Bank data */
+        {"republic of india", "India"},
+        {"federal republic of germany", "Germany"},
+        {"kingdom of saudi arabia", "Saudi Arabia"},
+        {"swiss confederation", "Switzerland"},
+        {"hellenic republic", "Greece"},
+        {"republic of greece", "Greece"},
+        {"republic of south africa", "South Africa"},
+        {"kingdom of the netherlands", "Netherlands"},
+        {"islamic republic of pakistan", "Pakistan"},
+        {"federative republic of brazil", "Brazil"},
+        {"kingdom of spain", "Spain"},
+        {"kingdom of norway", "Norway"},
+        {"kingdom of denmark", "Denmark"},
+        {"republic of austria", "Austria"},
+        {"republic of ireland", "Ireland"},
+        {"republic of poland", "Poland"},
+        {"republic of italy", "Italy"},
+        {"republic of portugal", "Portugal"},
+        {"republic of finland", "Finland"},
+        {"kingdom of belgium", "Belgium"},
+        {"kingdom of sweden", "Sweden"},
+        {"republic of singapore", "Singapore"},
+        {"republic of indonesia", "Indonesia"},
+        {"republic of turkey", "Turkey"},
+        {"republic of the philippines", "Philippines"},
+        {"philippines", "Philippines"},
+        {"republic of france", "France"},
+        {"grand duchy of luxembourg", "Luxembourg"},
+        {"luxembourg", "Luxembourg"},
         /* Fix J (Session 4): additional aliases commonly seen in ranking data */
         /* Korea short-form variants after punctuation removal */
         {"korea rep", "South Korea"},
