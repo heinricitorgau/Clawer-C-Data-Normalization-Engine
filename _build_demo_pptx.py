@@ -127,7 +127,7 @@ def kicker_title(slide, kicker, title, color_k=TEAL, color_t=INK):
         {'runs': [(title, dict(size=27, color=color_t, bold=True))]},
     ])
 
-PAGE_TOTAL = 9
+PAGE_TOTAL = 10
 def footer(slide, page_no, dark=False):
     c = ICE if dark else MUTED
     text(slide, MARGIN, 7.08, 8.0, 0.3, [
@@ -449,7 +449,32 @@ text(s, 7.3, by + 0.56, 5.15, 1.1, [
 footer(s, 5)
 
 # =====================================================================
-# Slide 6 — Implementation (2): normalization rules table
+# Slide 6 — Implementation (2): Windows run screenshots
+# =====================================================================
+s = new_slide()
+kicker_title(s, "03 · IMPLEMENTATION", "實作 — Windows 實際執行畫面")
+IMG_DIR = r"C:\Users\User\OneDrive\Desktop\Clawer-C-Data-Normalization-Engine\c_engine\docs\img"
+s.shapes.add_picture(IMG_DIR + r"\run-build-load.png", In(MARGIN), In(1.7), width=In(5.85))
+s.shapes.add_picture(IMG_DIR + r"\run-normalize-export.png", In(7.08), In(1.7), width=In(5.85))
+text(s, MARGIN, 4.95, 5.85, 0.5, [
+    {'runs': [("build.ps1 編譯（清空舊輸出）→ 選項 1 載入並顯示原始資料",
+               dict(size=10.5, color=MUTED))], 'align': PP_ALIGN.CENTER},
+])
+text(s, 7.08, 4.95, 5.85, 0.5, [
+    {'runs': [("選項 2 正規化並顯示結果 → 選項 3 匯出後自動離開",
+               dict(size=10.5, color=MUTED))], 'align': PP_ALIGN.CENTER},
+])
+box(s, MARGIN, 5.62, 11.93, 0.62, fill="E8F4F2", radius=0.08)
+text(s, MARGIN, 5.77, 11.93, 0.34, [
+    {'runs': [("完整 demo 流程僅需三個輸入：", dict(size=12.5, color=INK, bold=True)),
+              ("1 → 2 → 3", dict(size=12.5, color=TEAL, bold=True, font=MONO)),
+              ("，即完成載入、正規化、匯出並自動離開", dict(size=12.5, color=INK, bold=True))],
+     'align': PP_ALIGN.CENTER},
+])
+footer(s, 6)
+
+# =====================================================================
+# Slide 7 — Implementation (3): normalization rules table
 # =====================================================================
 s = new_slide()
 kicker_title(s, "03 · IMPLEMENTATION", "實作 — 正規化規則與實例")
@@ -499,10 +524,10 @@ text(s, MARGIN, 6.62, 11.93, 0.35, [
     {'runs': [("規則涵蓋 6 種排名格式、大小寫不敏感比對（\"TOP 100\" ≡ \"Top 100\"），並拒絕負數排名、TOP 0 與整數溢位（strtol + 上限防護）。",
                dict(size=11, color=MUTED))]},
 ])
-footer(s, 6)
+footer(s, 7)
 
 # =====================================================================
-# Slide 7 — Implementation (3): testing & verification
+# Slide 8 — Implementation (4): testing & verification
 # =====================================================================
 s = new_slide()
 kicker_title(s, "03 · IMPLEMENTATION", "實作 — 弱點導向測試與驗證")
@@ -572,10 +597,10 @@ text(s, RX + RW - 1.85, ty + 5 * 0.6 + 0.12, 1.65, 0.3, [
     {'runs': [("602 / 602", dict(size=12, color=MINT, bold=True, font=MONO))],
      'align': PP_ALIGN.RIGHT},
 ])
-footer(s, 7)
+footer(s, 8)
 
 # =====================================================================
-# Slide 8 — Conclusion
+# Slide 9 — Conclusion
 # =====================================================================
 s = new_slide()
 kicker_title(s, "04 · CONCLUSION", "結論 — 成果、限制與未來工作")
@@ -617,10 +642,10 @@ text(s, MARGIN, 6.33, 11.93, 0.34, [
     {'runs': [("以小而可驗證的 C 核心，換取資料管線中可預期的正規化行為。",
                dict(size=14, color=MINT, bold=True))], 'align': PP_ALIGN.CENTER},
 ])
-footer(s, 8)
+footer(s, 9)
 
 # =====================================================================
-# Slide 9 — References
+# Slide 10 — References
 # =====================================================================
 s = new_slide(bg=NAVY)
 text(s, 0.9, 0.5, 11.5, 0.3, [
@@ -670,7 +695,7 @@ text(s, 0.9, 6.6, 11.5, 0.4, [
     {'runs': [("Thank You — 謝謝聆聽   |   Demo：2026.06.18 – 06.20   |   b11402037 高恩在 · b11402053 林秉學",
                dict(size=12, color=CODE_CM, font=MONO))]},
 ])
-footer(s, 9, dark=True)
+footer(s, 10, dark=True)
 
 OUT = r"C:\Users\User\OneDrive\Desktop\Clawer-C-Data-Normalization-Engine\b11402037-b11402053-demo.pptx"
 prs.save(OUT)
