@@ -200,7 +200,7 @@ for i, (sid, name) in enumerate(members):
 code_block(s, 6.6, 3.62, 5.8, 2.5, [
     ("$ make run", CODE_HI),
     ("==== Clawer C Data Normalization Engine ====", CODE_TX),
-    ("1. 載入 CSV   3. 正規化   5. 匯出", CODE_TX),
+    ("1. 載入   2. 正規化   3. 匯出", CODE_TX),
     ("", CODE_TX),
     ("$ make test_all", CODE_HI),
     ("Passed: 602 / 602 — All tests passed.", CODE_TX),
@@ -426,11 +426,11 @@ text(s, MARGIN + 0.25, by + 0.18, 5.4, 0.3, [
     {'runs': [("互動式 CLI — src/main.c", dict(size=11.5, color=CODE_HI, bold=True, font=MONO))]},
 ])
 text(s, MARGIN + 0.25, by + 0.56, 5.4, 1.0, [
-    {'runs': [("1 載入 CSV   2 顯示原始   3 執行正規化", dict(size=11.5, color=CODE_TX, font=MONO))],
+    {'runs': [("1 載入＋顯示原始   2 正規化＋顯示結果", dict(size=11.5, color=CODE_TX, font=MONO))],
      'line_spacing': 1.35},
-    {'runs': [("4 預覽結果   5 匯出 CSV   0 離開", dict(size=11.5, color=CODE_TX, font=MONO))],
+    {'runs': [("3 匯出 CSV＋自動離開   0 離開", dict(size=11.5, color=CODE_TX, font=MONO))],
      'line_spacing': 1.35},
-    {'runs': [("狀態防呆：未載入 / 未正規化時擋下後續操作", dict(size=10.5, color=CODE_CM))],
+    {'runs': [("同步複合動作設計；狀態防呆擋下未就緒操作", dict(size=10.5, color=CODE_CM))],
      'line_spacing': 1.35},
 ])
 

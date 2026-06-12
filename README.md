@@ -33,8 +33,16 @@ make
 
 ```powershell
 cd c_engine
+.\build.ps1
+```
+
+或直接使用 gcc：
+
+```powershell
 gcc -Wall -Wextra -std=c11 -Iinclude src/main.c src/normalizer.c src/csv_reader.c src/csv_writer.c src/name_normalizer.c src/country_normalizer.c src/rank_parser.c src/score_parser.c src/requirement_parser.c src/utils.c -o build/clawer_normalizer.exe
 ```
+
+> 編譯時會一併清空 `data/samples/normalized_universities.csv`（上一次的正規化輸出），避免誤用舊結果；`make all` 與 `build.ps1` 皆內建此行為（直接用 gcc 指令則不會清空）。
 
 > 若想直接使用 `make`，可在 MSYS2 終端機執行 `pacman -S make`，之後於 MSYS2 UCRT64 shell 中照常使用 `make run` / `make test`。
 
@@ -66,15 +74,15 @@ make run
 .\build\clawer_normalizer.exe
 ```
 
-選單操作序列：
+選單操作序列（各選項為同步複合動作）：
 
 | 步驟 | 選單選項 | 動作 |
 |------|---------|------|
-| 1 | `1` | 載入 CSV 資料 |
-| 2 | `3` | 執行完整正規化流程 |
-| 3 | `4` | 預覽正規化後的結果 |
-| 4 | `5` | 匯出結果為 `.csv` 檔 |
-| 5 | `0` | 離開程式 |
+| 1 | `1` | 載入 CSV 資料並顯示原始資料 |
+| 2 | `2` | 執行完整正規化流程並顯示結果 |
+| 3 | `3` | 匯出結果為 `.csv` 檔並自動離開程式 |
+
+（選項 `0` 可隨時離開程式，不匯出）
 
 ### 4. 查看結果
 
@@ -135,12 +143,12 @@ All tests passed.
 ls data/samples/raw_universities.csv
 ```
 
-再執行 `make run`，依序輸入：`1`、`3`、`4`、`5`、`0`。
+再執行 `make run`，依序輸入：`1`、`2`、`3`（匯出後自動離開）。
 
 ### 一鍵快速驗證
 
 ```bash
-printf '1\n3\n5\n0\n' | ./build/clawer_normalizer
+printf '1\n2\n3\n' | ./build/clawer_normalizer
 ```
 
 若尚未編譯，先執行 `make`。

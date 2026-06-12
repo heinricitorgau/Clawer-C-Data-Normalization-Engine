@@ -17,6 +17,7 @@ SRCS = \
 
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 TARGET = $(BUILD_DIR)/clawer_normalizer
+OUTPUT_CSV = data/samples/normalized_universities.csv
 
 TEST_TARGET      = $(BUILD_DIR)/test_normalizer
 TEST_SRC         = src/tests/test_normalizer.c
@@ -54,9 +55,14 @@ TEST_REGRESSION6_TARGET = $(BUILD_DIR)/test_regression6
 TEST_REGRESSION6_SRC    = src/tests/test_regression6.c
 TEST_REGRESSION6_OBJS   = $(filter-out $(BUILD_DIR)/main.o,$(OBJS)) $(BUILD_DIR)/test_regression6.o
 
-.PHONY: all run test test_extreme test_scale test_weakness test_regression2 test_regression3 test_regression4 test_regression5 test_regression6 test_all clean rebuild
+.PHONY: all run test test_extreme test_scale test_weakness test_regression2 test_regression3 test_regression4 test_regression5 test_regression6 test_all clean rebuild clean_output
 
-all: $(TARGET)
+all: $(TARGET) clean_output
+
+# 編譯時一併清空上一次的正規化輸出，避免拿到舊結果
+clean_output:
+	@printf '' > $(OUTPUT_CSV)
+	@echo "已清空 $(OUTPUT_CSV)"
 
 $(TARGET): $(OBJS)
 	@mkdir -p $(BUILD_DIR)

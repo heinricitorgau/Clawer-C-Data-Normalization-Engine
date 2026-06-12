@@ -45,11 +45,9 @@ static void print_normalized_records(const UniversityRecord records[], int count
 
 static void show_menu(void) {
     printf("\n==== Clawer C Data Normalization Engine ====\n");
-    printf("1. 載入 CSV 資料\n");
-    printf("2. 顯示原始資料\n");
-    printf("3. 執行完整正規化流程\n");
-    printf("4. 顯示正規化後資料\n");
-    printf("5. 匯出正規化結果到 CSV\n");
+    printf("1. 載入 CSV 資料並顯示原始資料\n");
+    printf("2. 執行完整正規化流程並顯示結果\n");
+    printf("3. 匯出正規化結果到 CSV 並離開程式\n");
     printf("0. 離開程式\n");
     printf("請輸入選項: ");
 }
@@ -85,6 +83,7 @@ int main(void) {
                     is_loaded = 1;
                     is_normalized = 0;
                     printf("\n成功載入 %d 筆資料。\n", record_count);
+                    print_raw_records(records, record_count);
                 } else {
                     printf("\n載入失敗，請確認 CSV 檔案是否存在。\n");
                 }
@@ -94,38 +93,23 @@ int main(void) {
                 if (!is_loaded) {
                     printf("\n尚未載入資料，請先執行選項 1。\n");
                 } else {
-                    print_raw_records(records, record_count);
+                    normalize_dataset(records, record_count);
+                    is_normalized = 1;
+                    printf("\n資料正規化完成。\n");
+                    print_normalized_records(records, record_count);
                 }
                 break;
 
             case 3:
                 if (!is_loaded) {
                     printf("\n尚未載入資料，請先執行選項 1。\n");
-                } else {
-                    normalize_dataset(records, record_count);
-                    is_normalized = 1;
-                    printf("\n資料正規化完成。\n");
-                }
-                break;
-
-            case 4:
-                if (!is_loaded) {
-                    printf("\n尚未載入資料，請先執行選項 1。\n");
                 } else if (!is_normalized) {
-                    printf("\n資料尚未正規化，請先執行選項 3。\n");
-                } else {
-                    print_normalized_records(records, record_count);
-                }
-                break;
-
-            case 5:
-                if (!is_loaded) {
-                    printf("\n尚未載入資料，請先執行選項 1。\n");
-                } else if (!is_normalized) {
-                    printf("\n資料尚未正規化，請先執行選項 3。\n");
+                    printf("\n資料尚未正規化，請先執行選項 2。\n");
                 } else {
                     if (write_normalized_csv(OUTPUT_CSV_PATH, records, record_count)) {
                         printf("\n已成功輸出到：%s\n", OUTPUT_CSV_PATH);
+                        printf("\n程式已結束。\n");
+                        return 0;
                     } else {
                         printf("\n輸出 CSV 失敗。\n");
                     }
