@@ -124,6 +124,13 @@ def make_table(headers, rows, widths_cm, mono_cols=()):
     doc.add_paragraph().paragraph_format.space_after = Pt(2)
     return t
 
+def figure(path, caption, width_cm=15.9):
+    doc.add_picture(path, width=Cm(width_cm))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.paragraphs[-1].paragraph_format.space_before = Pt(6)
+    para(align=WD_ALIGN_PARAGRAPH.CENTER,
+         runs=[(caption, dict(size=10, color=MUTED))], space_after=10)
+
 def bullets(items):
     for it in items:
         p = doc.add_paragraph(style='List Bullet')
@@ -339,7 +346,13 @@ code_block([
 ])
 para("選單採同步複合動作設計：載入後立即顯示原始資料、正規化後立即顯示結果、"
      "匯出成功後自動離開程式。標準操作序列為 1 → 2 → 3，"
-     "輸出檔為 data/samples/normalized_universities.csv。")
+     "輸出檔為 data/samples/normalized_universities.csv。"
+     "以下為 Windows 環境的實際執行畫面：")
+IMG_DIR = r"C:\Users\User\OneDrive\Desktop\Clawer-C-Data-Normalization-Engine\c_engine\docs\img"
+figure(IMG_DIR + r"\run-build-load.png",
+       "圖 1：以 build.ps1 編譯（同步清空舊輸出）後執行，選項 1 載入 CSV 並顯示原始資料")
+figure(IMG_DIR + r"\run-normalize-export.png",
+       "圖 2：選項 2 正規化並顯示結果，選項 3 匯出 CSV 後自動離開程式")
 
 doc.add_heading("3.3 正規化規則與實例", level=2)
 make_table(
