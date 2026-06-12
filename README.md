@@ -22,10 +22,21 @@
 
 ### 1. 編譯引擎
 
+**macOS / Linux（有 make）：**
+
 ```bash
 cd c_engine
 make
 ```
+
+**Windows（無 make，使用 MSYS2 gcc）：**
+
+```powershell
+cd c_engine
+gcc -Wall -Wextra -std=c11 -Iinclude src/main.c src/normalizer.c src/csv_reader.c src/csv_writer.c src/name_normalizer.c src/country_normalizer.c src/rank_parser.c src/score_parser.c src/requirement_parser.c src/utils.c -o build/clawer_normalizer.exe
+```
+
+> 若想直接使用 `make`，可在 MSYS2 終端機執行 `pacman -S make`，之後於 MSYS2 UCRT64 shell 中照常使用 `make run` / `make test`。
 
 ### 2. 準備輸入資料
 
@@ -43,8 +54,16 @@ QS Rank,University,Country,GMAT,GRE,GPA,IELTS,TOEFL,Duolingo,Overall Score,URL
 
 ### 3. 執行正規化
 
+**macOS / Linux：**
+
 ```bash
 make run
+```
+
+**Windows：**
+
+```powershell
+.\build\clawer_normalizer.exe
 ```
 
 選單操作序列：
@@ -76,9 +95,19 @@ University of California Berkeley (Ucb),United States,12,14,91.70
 
 ### 單元測試
 
+**macOS / Linux：**
+
 ```bash
 cd c_engine
 make test
+```
+
+**Windows：**
+
+```powershell
+cd c_engine
+gcc -Wall -Wextra -std=c11 -Iinclude src/normalizer.c src/csv_reader.c src/csv_writer.c src/name_normalizer.c src/country_normalizer.c src/rank_parser.c src/score_parser.c src/requirement_parser.c src/utils.c src/tests/test_normalizer.c -o build/test_normalizer.exe
+.\build\test_normalizer.exe
 ```
 
 預期結果：
@@ -116,6 +145,8 @@ printf '1\n3\n5\n0\n' | ./build/clawer_normalizer
 
 若尚未編譯，先執行 `make`。
 
+> Windows 注意：此指令請在 Git Bash 中執行（exe 為 `./build/clawer_normalizer.exe`）。PowerShell 以管線餵入字串會附加 BOM 導致 `scanf` 讀取失敗，請改用 Git Bash 或手動輸入選項。
+
 ### 檢查輸出
 
 ```bash
@@ -127,7 +158,10 @@ sed -n '1,20p' data/samples/normalized_universities.csv
 | 問題 | 原因與處理方式 |
 |------|--------------|
 | `make test` 失敗 | 先執行 `make clean && make test` 重新編譯 |
-| `載入失敗，請確認 CSV 檔案是否存在` | 確認 `data/samples/raw_universities.csv` 路徑正確 |
+| Windows 出現 `無法辨識 'make'` | 系統未安裝 make；改用上方 gcc 指令直接編譯，或在 MSYS2 安裝 make |
+| Windows 主控台中文顯示亂碼 | 舊版執行檔未切換 UTF-8 主控台編碼；重新編譯即可（`main.c` 已內建 `SetConsoleOutputCP(CP_UTF8)`）|
+| 重新編譯出現 `Permission denied` | 執行檔仍在執行中鎖住檔案；先結束程式（選單輸入 `0`）再編譯 |
+| `載入失敗，請確認 CSV 檔案是否存在` | 確認 `data/samples/raw_universities.csv` 路徑正確；Windows 下請在 `c_engine` 目錄執行 exe（程式使用相對路徑）|
 | CSV header 欄位數或欄名不符合預期 | reader 會拒絕載入；確認輸入 CSV 格式符合 11 欄規格 |
 | 使用自訂資料 | 將 CSV 覆蓋至 `data/samples/raw_universities.csv` 後重新執行 |
 
