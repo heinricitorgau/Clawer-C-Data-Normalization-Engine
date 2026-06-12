@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "record.h"
 #include "normalizer.h"
 #include "csv_reader.h"
@@ -56,6 +60,13 @@ int main(void) {
     int is_loaded = 0;
     int is_normalized = 0;
     int choice;
+
+#ifdef _WIN32
+    /* Source strings are UTF-8; switch the Windows console from the
+       locale codepage (e.g. CP950) to UTF-8 so they display correctly. */
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
 
     printf("Clawer C Data Normalization Engine 啟動中...\n");
 
