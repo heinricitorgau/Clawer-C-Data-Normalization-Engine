@@ -5,7 +5,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-gcc -Wall -Wextra -std=c11 -Iinclude `
+gcc -Wall -Wextra -std=c11 -static -Iinclude `
     src/main.c src/normalizer.c src/csv_reader.c src/csv_writer.c `
     src/name_normalizer.c src/country_normalizer.c src/rank_parser.c `
     src/score_parser.c src/requirement_parser.c src/utils.c `

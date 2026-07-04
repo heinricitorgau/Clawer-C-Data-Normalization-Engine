@@ -18,7 +18,51 @@
 
 **設計選擇**：以 C 實作核心引擎，而非使用 Python/pandas，rationale 是在大量 CSV 批次處理時維持低記憶體佔用與可預期的執行時間，同時避免引入 Python 執行期依賴。
 
-## 使用說明（C 引擎）
+## 在其他電腦上免安裝執行（可攜式版本）
+
+若要在**未安裝任何開發工具**的 Windows 10 / 11 電腦（例如展示用電腦）直接執行，
+不需要在該電腦安裝 gcc、make 或 MSYS2，只要產生一份可攜式套件並複製過去即可。
+
+### 產生可攜式套件
+
+在開發機（已安裝 MSYS2 gcc）的 `c_engine` 目錄下執行：
+
+```powershell
+.\make_dist.ps1
+```
+
+會在 `c_engine/dist/` 下產生：
+
+- `ClawerNormalizer-Portable/` — 可攜式資料夾
+- `ClawerNormalizer-Portable.zip` — 同內容壓縮檔
+
+套件結構：
+
+```
+ClawerNormalizer-Portable/
+├── clawer_normalizer.exe   靜態編譯（gcc -static），零外部 DLL 依賴
+├── test_normalizer.exe     單元測試（17 / 17）
+├── Run-執行.bat            雙擊啟動主程式
+├── Test-測試.bat           雙擊執行單元測試
+├── README.txt              使用說明
+└── data/samples/           範例輸入與輸出
+```
+
+### 在目標電腦使用
+
+1. 將整個 `ClawerNormalizer-Portable` 資料夾（或解壓後的 zip）複製到目標電腦。
+2. **雙擊 `Run-執行.bat`** 即可啟動 — 啟動器會自動切換到正確目錄，相對路徑不會出錯。
+3. 依選單輸入 `1` → `2` → `3` 完成載入、正規化、匯出並離開。
+
+> **技術重點**：執行檔以 `gcc -static` 編譯，僅依賴 Windows 內建系統元件
+> （`KERNEL32` 與 UCRT），不需要任何 MinGW / MSYS2 執行期 DLL，
+> 因此可在任何 Windows 10 / 11 直接執行。
+>
+> **注意**：若目標電腦開啟「智慧型應用程式控制 (Smart App Control)」，
+> 未簽章的執行檔可能被封鎖；如遇此情況請於該電腦的
+> 「Windows 安全性 → 應用程式與瀏覽器控制」中關閉該功能。
+
+## 使用說明（C 引擎，開發機）
 
 ### 1. 編譯引擎
 
