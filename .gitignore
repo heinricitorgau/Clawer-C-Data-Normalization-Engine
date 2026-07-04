@@ -53,3 +53,18 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Build / distribution artifacts
+build/
+dist/
+*.zip
+
+# OS junk
+.DS_Store
+
+# Non-C helper scripts (repo is C-only; local doc-generation scripts stay untracked)
+*.py
+
+# Temporary files
+*.tmp
+*.new
